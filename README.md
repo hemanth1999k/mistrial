@@ -204,18 +204,20 @@ Known limits: kappa on a handful of cases is not evidence, and a judge that is p
 
 ## How is this different
 
-| | judgeflake | eval platforms (LangSmith, Braintrust, promptfoo, DeepEval) | judgecheck | judgekeeper |
-|---|---|---|---|---|
-| re-runs the judge and reports self-agreement | yes | no | yes | no |
-| takes the evaluator function you already have | yes | n/a | no, you prepare a ratings file | no, you hand-label in a browser |
-| agreement between judges (kappa, alpha) | yes | no | yes, with bootstrap CIs | partial |
-| drift between saved runs | yes | no | no | re-check |
-| CI gate | yes | some | no | no |
-| shareable single-file HTML | yes | hosted UI | markdown | browser page |
-| dependencies | typer, rich, httpx | heavy | numpy, matplotlib | – |
-| time to first result | ten seconds, no key | account | ~30 s, clone | hand-label first |
+Other people have looked at this problem, and some of their tools go deeper than judgeflake on statistics. The short version:
 
-judgecheck is more rigorous where it overlaps (confidence intervals, bias probes). judgeflake is the one you can run against your existing evaluator in a minute and put in CI. They are complementary.
+| | judgeflake | judgecheck | judgebench | Assay rejudge | LangSmith repetitions |
+|---|---|---|---|---|---|
+| calls the judge for you, N times | yes | no, you bring ratings | 2 runs, A/B swap | yes | yes |
+| self-agreement and flipped cases | yes | from your file | no | yes | mean and std dev only |
+| agreement between judges (kappa, alpha) | yes | yes, with confidence intervals | judge vs human | vs saved verdicts | no |
+| position and verbosity bias probes | no | yes | yes | no | no |
+| drift between saved runs | yes | no | no | no | UI compare |
+| CI gate on judge reliability | yes | no | no | yes | no |
+| takes your existing evaluator function | yes | no | no | yes | its own |
+| try with no key | 10 s demo | ~30 s | no | no | no |
+
+The full table, with what each of them does better, is in [docs/COMPARISON.md](docs/COMPARISON.md). judgecheck is the one to use when you need confidence intervals and bias probes for a paper or audit. judgeflake is the one to run against the evaluator you already have, in a minute, and put in CI.
 
 ## Roadmap
 
