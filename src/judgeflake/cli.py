@@ -16,7 +16,7 @@ from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, T
 from . import __version__
 from .cache import DEFAULT_DIR, Cache
 from .cases import load_cases
-from .judges import build_judge
+from .judges import PROVIDERS, build_judge
 from .prompts import RUBRICS
 from .report import analyze, compare, print_compare, print_report, write_outputs
 from .runner import RunResult, run
@@ -124,7 +124,7 @@ def _run_and_report(
 @app.command("run")
 def run_cmd(
     cases: Path = typer.Argument(..., help="Cases file: .jsonl, .json or .csv with inputs/outputs(/reference_outputs/label)."),
-    judge: list[str] = typer.Option(..., "--judge", "-j", help="Judge spec, repeatable: openai:<model>, anthropic:<model>, module:function, demo[:flaky|steady|lenient|score]."),
+    judge: list[str] = typer.Option(..., "--judge", "-j", help="Judge spec, repeatable: <provider>:<model> (openai, anthropic, gemini, groq, mistral, deepseek, xai, together, openrouter, ollama, custom; see `judgeflake providers`), module:function, demo[:flaky|steady|lenient|score]."),
     runs: int = typer.Option(3, "--runs", "-n", min=1, help="How many times to ask each judge about each case."),
     rubric: str = typer.Option("correctness", "--rubric", "-r", help="Built-in rubric name (correctness, quality) or a prompt file for LLM judges."),
     concurrency: int = typer.Option(8, "--concurrency", "-c", min=1),
@@ -166,7 +166,7 @@ def demo_cmd(
         code = _run_and_report(
             Path(p), ["demo", "demo:flaky", "demo:lenient"], runs, "correctness", 8, True, out_dir, _html_path(html), None, None, None, None, 10, None, None, 1024, "demo", False, "judgeflake demo"
         )
-    console.print("[dim]These are fake judges. Point `judgeflake run` at your own cases with --judge openai:<model> or --judge module:function.[/dim]")
+    console.print("[dim]These are fake judges. Point `judgeflake run` at your own cases with --judge openai:<model>, --judge ollama:<model> or --judge module:function.[/dim]")
     raise typer.Exit(code)
 
 
@@ -206,6 +206,17 @@ def rubrics_cmd() -> None:
     """List the built-in rubrics."""
     for name, r in RUBRICS.items():
         console.print(f"[bold]{name}[/bold]  {r['description']}" + ("  (needs reference_outputs)" if r["needs_reference"] == "true" else ""))
+
+
+@app.command("providers")
+def providers_cmd() -> None:
+    """List the LLM providers, the env var that holds each key, and the base URL."""
+    console.print("[bold]anthropic[/bold]  ANTHROPIC_API_KEY  (native messages API)")
+    for name, (url, envs) in PROVIDERS.items():
+        key = " or ".join(envs) if envs else "no key"
+        where = url or "set JUDGEFLAKE_BASE_URL"
+        console.print(f"[bold]{name}[/bold]  {key}  {where}")
+    console.print("[dim]<PROVIDER>_BASE_URL overrides a base URL. All of these use --judge <provider>:<model>.[/dim]")
 
 
 if __name__ == "__main__":

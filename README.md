@@ -107,10 +107,21 @@ Three kinds, mixed freely with repeated `--judge`:
 
 | spec | what it is |
 |---|---|
-| `openai:<model>` | OpenAI chat completions with a built-in rubric |
-| `anthropic:<model>` | Anthropic messages with a built-in rubric |
+| `openai:<model>` | OpenAI, needs `OPENAI_API_KEY` |
+| `anthropic:<model>` | Anthropic, needs `ANTHROPIC_API_KEY` |
+| `gemini:<model>` | Google Gemini, needs `GEMINI_API_KEY` |
+| `groq:`, `mistral:`, `deepseek:`, `xai:`, `together:`, `openrouter:` | hosted OpenAI-compatible providers, each with its own `<PROVIDER>_API_KEY` |
+| `ollama:<model>` | a local Ollama model, no key |
+| `custom:<model>` | any OpenAI-compatible server: set `JUDGEFLAKE_BASE_URL` (vLLM, LM Studio, llama.cpp, a proxy) |
 | `module:function` | any Python function with the LangSmith / openevals signature |
 | `demo`, `demo:flaky`, `demo:steady`, `demo:lenient` | deterministic fake judges, no key |
+
+All LLM judges use the same built-in rubric and ask for a JSON verdict. `judgeflake providers` lists the providers with their env vars and base URLs; `<PROVIDER>_BASE_URL` overrides a base URL, which is how you point `ollama:` at another machine or `openai:` at a proxy.
+
+```bash
+# GPT vs Claude vs a local model, five runs each
+judgeflake run cases.jsonl --judge openai:gpt-5-mini --judge anthropic:claude-sonnet-5-5 --judge ollama:llama3.2 --runs 5
+```
 
 ### Your own evaluator
 

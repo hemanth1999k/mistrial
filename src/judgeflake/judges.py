@@ -179,14 +179,33 @@ def _jsonable(value: Any) -> Any:
 
 # ------------------------------------------------------------------------------------ llm --
 
-OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 RETRY_STATUSES = {408, 409, 425, 429, 500, 502, 503, 504}
+
+# Every provider except Anthropic speaks the OpenAI chat-completions format, so one adapter
+# covers them all: (default base URL, env vars that may hold the key). An empty env tuple means
+# no key is needed. `<PROVIDER>_BASE_URL` in the environment overrides the base URL.
+PROVIDERS: dict[str, tuple[str, tuple[str, ...]]] = {
+    "openai": ("https://api.openai.com/v1", ("OPENAI_API_KEY",)),
+    "gemini": ("https://generativelanguage.googleapis.com/v1beta/openai", ("GEMINI_API_KEY", "GOOGLE_API_KEY")),
+    "groq": ("https://api.groq.com/openai/v1", ("GROQ_API_KEY",)),
+    "mistral": ("https://api.mistral.ai/v1", ("MISTRAL_API_KEY",)),
+    "deepseek": ("https://api.deepseek.com/v1", ("DEEPSEEK_API_KEY",)),
+    "xai": ("https://api.x.ai/v1", ("XAI_API_KEY",)),
+    "together": ("https://api.together.xyz/v1", ("TOGETHER_API_KEY",)),
+    "openrouter": ("https://openrouter.ai/api/v1", ("OPENROUTER_API_KEY",)),
+    "ollama": ("http://localhost:11434/v1", ()),
+    "custom": ("", ("JUDGEFLAKE_API_KEY",)),  # any OpenAI-compatible server: set JUDGEFLAKE_BASE_URL
+}
+LLM_PROVIDERS = ("anthropic", *PROVIDERS)
 
 
 @dataclass
 class LLMJudge:
-    """`openai:<model>` or `anthropic:<model>` with a rubric. Asks for JSON, parses it leniently."""
+    """`<provider>:<model>` with a rubric. Asks for JSON, parses it leniently.
+
+    Providers: anthropic (native messages API) and every OpenAI-compatible one in PROVIDERS.
+    """
 
     provider: str
     model: str
@@ -201,17 +220,25 @@ class LLMJudge:
     _client: httpx.AsyncClient | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
-        if self.provider not in ("openai", "anthropic"):
-            raise ValueError(f"unknown provider {self.provider!r} (use openai or anthropic)")
+        if self.provider not in LLM_PROVIDERS:
+            raise ValueError(f"unknown provider {self.provider!r} (use one of {', '.join(LLM_PROVIDERS)})")
         self.template = self.template or load_rubric(self.rubric)
         self.name = self.name or f"{self.provider}:{self.model}"
 
     @classmethod
     def from_spec(cls, spec: str, **kw: Any) -> "LLMJudge":
         if ":" not in spec:
-            raise ValueError(f"judge must look like openai:<model> or anthropic:<model>, got {spec!r}")
+            raise ValueError(f"judge must look like <provider>:<model>, e.g. openai:gpt-5-mini, got {spec!r}")
         provider, _, model = spec.partition(":")
         return cls(provider=provider, model=model, **kw)
+
+    def base_url(self) -> str:
+        """OpenAI-compatible providers only. `<PROVIDER>_BASE_URL` overrides the default."""
+        default, _ = PROVIDERS[self.provider]
+        url = os.environ.get(f"{self.provider.upper()}_BASE_URL") or (os.environ.get("JUDGEFLAKE_BASE_URL") if self.provider == "custom" else None) or default
+        if not url:
+            raise RuntimeError(f"{self.name}: set JUDGEFLAKE_BASE_URL to your OpenAI-compatible server, e.g. http://localhost:8000/v1")
+        return url.rstrip("/")
 
     def describe(self) -> dict:
         return {
@@ -227,12 +254,17 @@ class LLMJudge:
     def prompt_for(self, case: Case) -> str:
         return render(self.template, inputs=case.inputs, outputs=case.outputs, reference_outputs=case.reference_outputs)
 
-    def api_key(self) -> str:
-        env = "OPENAI_API_KEY" if self.provider == "openai" else "ANTHROPIC_API_KEY"
-        key = os.environ.get(env)
-        if not key:
-            raise RuntimeError(f"{self.name}: set {env} in the environment")
-        return key
+    def api_key(self) -> str | None:
+        """The key from the first matching env var, or None when the provider needs none (Ollama)."""
+        envs = ("ANTHROPIC_API_KEY",) if self.provider == "anthropic" else PROVIDERS[self.provider][1]
+        for env in envs:
+            if os.environ.get(env):
+                return os.environ[env]
+        if not envs:
+            return None
+        if self.provider == "custom" and len(envs) == 1:
+            return None  # a local OpenAI-compatible server often has no auth
+        raise RuntimeError(f"{self.name}: set {' or '.join(envs)} in the environment")
 
     async def judge(self, case: Case, run: int, cache: Cache) -> tuple[Any, str | None, bool]:
         prompt = self.prompt_for(case)
@@ -250,9 +282,9 @@ class LLMJudge:
         client = self._client or httpx.AsyncClient(timeout=self.timeout)
         own = self._client is None
         try:
-            if self.provider == "openai":
-                return await self._openai(client, prompt)
-            return await self._anthropic(client, prompt)
+            if self.provider == "anthropic":
+                return await self._anthropic(client, prompt)
+            return await self._openai(client, prompt)
         finally:
             if own:
                 await client.aclose()
@@ -276,25 +308,30 @@ class LLMJudge:
         raise RuntimeError(f"{self.name}: gave up after {self.retries} attempts: {last}")
 
     async def _openai(self, client: httpx.AsyncClient, prompt: str) -> str:
-        headers = {"Authorization": f"Bearer {self.api_key()}"}
+        """OpenAI itself and every OpenAI-compatible provider (Gemini, Groq, Ollama, ...)."""
+        url = f"{self.base_url()}/chat/completions"
+        key = self.api_key()
+        headers = {"Authorization": f"Bearer {key}"} if key else {}
         body: dict[str, Any] = {
             "model": self.model,
             "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": prompt}],
-            "max_completion_tokens": self.max_tokens,
             "response_format": {"type": "json_object"},
         }
+        # OpenAI renamed the limit; most compatible servers still only know the old name.
+        body["max_completion_tokens" if self.provider == "openai" else "max_tokens"] = self.max_tokens
         if self.temperature is not None:
             body["temperature"] = self.temperature
         if self.reasoning_effort:
             body["reasoning_effort"] = self.reasoning_effort
-        r = await self._post(client, OPENAI_URL, headers, body)
-        # Newer models reject some params (temperature, an effort word). Drop them once and retry.
-        if r.status_code == 400 and ("temperature" in body or "reasoning_effort" in body):
+        r = await self._post(client, url, headers, body)
+        # Some models reject some params (temperature, an effort word, json mode). Drop the ones
+        # the error names and retry once.
+        optional = ("temperature", "reasoning_effort", "response_format")
+        if r.status_code == 400 and any(p in body for p in optional):
             msg = r.text
-            for p in ("temperature", "reasoning_effort"):
-                if p in body and p in msg:
-                    body.pop(p)
-            r = await self._post(client, OPENAI_URL, headers, body)
+            dropped = [body.pop(p) for p in optional if p in body and p in msg]
+            if dropped:
+                r = await self._post(client, url, headers, body)
         if r.status_code >= 400:
             raise RuntimeError(f"{self.name}: HTTP {r.status_code}: {r.text[:300]}")
         data = r.json()
@@ -350,7 +387,7 @@ def build_judge(spec: str, *, rubric: str = "correctness", temperature: float | 
     """Turn a CLI spec into a judge.
 
     - demo, demo:flaky, demo:steady, demo:score   -> DemoJudge presets
-    - openai:<model>, anthropic:<model>           -> LLMJudge
+    - <provider>:<model> for any LLM_PROVIDERS    -> LLMJudge
     - anything else with a colon                  -> CallableJudge module:function
     """
     if spec == "demo" or spec.startswith("demo:"):
@@ -369,7 +406,7 @@ def build_judge(spec: str, *, rubric: str = "correctness", temperature: float | 
             j.name = name
         return j
     provider = spec.partition(":")[0]
-    if provider in ("openai", "anthropic"):
+    if provider in LLM_PROVIDERS:
         return LLMJudge.from_spec(spec, rubric=rubric, temperature=temperature, reasoning_effort=reasoning_effort, max_tokens=max_tokens, name=name or "")
     return CallableJudge.from_spec(spec, name=name)
 

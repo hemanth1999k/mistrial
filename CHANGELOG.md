@@ -4,6 +4,10 @@ All notable changes to judgeflake are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+### Added
+- Judges for every OpenAI-compatible provider: `gemini:`, `groq:`, `mistral:`, `deepseek:`, `xai:`, `together:`, `openrouter:`, `ollama:` (local, no key) and `custom:` with `JUDGEFLAKE_BASE_URL`. `<PROVIDER>_BASE_URL` overrides any base URL.
+- `judgeflake providers` lists them with their env vars.
+
 ## [0.1.0] - 2026-10-25
 
 First release.
