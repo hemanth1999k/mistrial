@@ -50,3 +50,30 @@ Being honest about this is cheaper than being corrected in a comment thread.
 ## Roadmap items taken from this table
 
 Position-bias swap test, confidence intervals on kappa and alpha, ordinal alpha, cost per run. In that order, by how often people are likely to ask.
+
+## Proposed additions and who already has them
+
+Checked 2026-10-25 against the same READMEs plus judge-drift-sentinel, haizelabs verdict and truescore.
+
+| idea | exists anywhere? | closest |
+|---|---|---|
+| 1. Rubric sensitivity: paraphrase the rubric three ways, count verdicts that change | no | papers only; Assay rewords the request, not the rubric |
+| 2. Gate false-alarm calculator: how often CI goes red on no change | no | judgecheck plans run counts (Spearman-Brown) |
+| 3. Judge migration report with threshold translation | no | judge-drift-sentinel says judge vs system moved; Assay rejudge with a new judge |
+| 4. Silent-upgrade sentinel on an anchor set | **yes**, judge-drift-sentinel | borrow the design, credit it |
+| 5. Parser audit: raw text next to parsed verdict | no | Assay counts "no verdict" apart from flips |
+| 6. Adaptive re-ask: extra runs only where runs disagreed | no | verdict repeats a fixed k |
+| 7. Escalation list of flaky cases to a human queue | no | LangSmith has annotation queues, nothing fills them by reliability |
+| 8. Stabilized evaluator: wrap into a k-sample majority vote, same signature | partly | haizelabs verdict builds voting judges as a framework |
+| 9. Rubric reversal check: flip the criterion, confirm verdicts invert | no | EMNLP 2026 paper only |
+| 10. GitHub Action with the card as a PR comment | partly | Assay and promptfoo-action post eval results, not judge reliability |
+| 11. Transitivity check for pairwise judges | no | TrustJudge paper only |
+
+Seven of eleven exist nowhere as a tool.
+
+## Other close projects
+
+- [judge-drift-sentinel](https://pypi.org/project/judge-drift-sentinel/): frozen human-labeled anchor set, tells you whether the judge or the system moved, exit codes. v0.1.0, PyPI upload pending.
+- [verdict](https://github.com/haizelabs/verdict) (haizelabs): framework for compound judges with repeat and vote. 349 stars, last push 2025-11. Builds judges rather than measuring them.
+- [truescore](https://pypi.org/project/truescore/): bias-corrected scores and confidence intervals for LLM-judged benchmarks from a results file. Statistics after the fact.
+- [promptfoo-action](https://github.com/promptfoo/promptfoo-action): posts eval results on PRs. 77 stars.
