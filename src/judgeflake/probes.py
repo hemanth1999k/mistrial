@@ -361,13 +361,24 @@ def print_sentinel(out: dict, console: Console | None = None) -> None:
 # --------------------------------------------------------------------------------- escalate --
 
 
+def _csv_safe(value: str) -> str:
+    """Stop a cell that starts with = + - @ from running as a formula when the CSV opens in a spreadsheet.
+
+    Model outputs are untrusted text; "=HYPERLINK(...)" in an answer must stay text.
+    """
+    if value and value[0] in "=+-@\t\r":
+        return "'" + value
+    return value
+
+
 def write_escalation_csv(rows: list[dict], path: Path, judge_names: Sequence[str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["case_id", "reason", "disagreement", *[f"verdicts:{j}" for j in judge_names], "human_label", "inputs", "outputs", "reference_outputs", "your_verdict", "notes"])
         for r in rows:
-            w.writerow([r["case_id"], r["reason"], r["disagreement"], *[r["verdicts"].get(j, "") for j in judge_names], _fmt(r["label"]) if r["label"] is not None else "", _s(r["inputs"]), _s(r["outputs"]), _s(r["reference_outputs"]), "", ""])
+            cells = [r["case_id"], r["reason"], r["disagreement"], *[r["verdicts"].get(j, "") for j in judge_names], _fmt(r["label"]) if r["label"] is not None else "", _s(r["inputs"]), _s(r["outputs"]), _s(r["reference_outputs"]), "", ""]
+            w.writerow([_csv_safe(c) if isinstance(c, str) else c for c in cells])
 
 
 def push_to_langsmith(rows: list[dict], dataset_name: str, client: Any = None) -> dict:

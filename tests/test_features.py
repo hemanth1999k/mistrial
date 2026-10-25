@@ -320,3 +320,20 @@ def test_cli_sentinel_and_escalate(tmp_path, monkeypatch):
     assert drift.exit_code == 2 and "JUDGE_DRIFT" in drift.output
     e = runner.invoke(app, ["escalate", str(saved), "--out", "h.csv"])
     assert e.exit_code == 0 and (tmp_path / "h.csv").exists() and "need a human" in e.output
+
+
+# ------------------------------------------------------------------------------ hardening --
+
+
+def test_markdown_escapes_names_and_csv_neutralises_formulas(tmp_path):
+    from judgeflake.probes import write_escalation_csv
+
+    result = asyncio.run(run([Case("c|1", "q", "=HYPERLINK(\"http://x\")", "a", True)], [DemoJudge(name="a|b<i>", flakiness=0.0)], runs=2, cache=Cache(enabled=False)))
+    rep = analyze(result)
+    md = to_markdown(rep, "t|x", ["a|b<i> flip rate 50% > 10%"])
+    assert "a\\|b&lt;i&gt;" in md and "| `a|b" not in md and "t\\|x" in md and "<i>" not in md
+    rows = [{"case_id": "c|1", "reason": "r", "disagreement": 0.5, "verdicts": {"a": "T F"}, "label": True, "inputs": "+1", "outputs": "=HYPERLINK(\"http://x\")", "reference_outputs": "-x", "notes": ""}]
+    out = tmp_path / "h.csv"
+    write_escalation_csv(rows, out, ["a"])
+    text = out.read_text()
+    assert "'=HYPERLINK" in text and "'+1" in text and "'-x" in text and "\n=" not in text

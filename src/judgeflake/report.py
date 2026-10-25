@@ -444,10 +444,20 @@ def write_outputs(report: dict, result: RunResult, html_path: Path | None, json_
 # ------------------------------------------------------------------------------- markdown --
 
 
+def _md(s: Any) -> str:
+    """Make a judge name or case id safe inside a markdown table cell: no pipes, no newlines, no HTML."""
+    return html.escape(str(s)).replace("|", "\\|").replace("\n", " ").replace("`", "'")
+
+
 def to_markdown(report: dict, title: str = "judgeflake report", gate_failures: list[str] | None = None) -> str:
-    """The card as a GitHub-flavoured markdown comment (what the GitHub Action posts on a PR)."""
+    """The card as a GitHub-flavoured markdown comment (what the GitHub Action posts on a PR).
+
+    Only names, ids and numbers go in; never case inputs or model text, which may contain
+    anything. Names are escaped so a judge called `a|b` cannot break the table or inject HTML.
+    """
     m = report["meta"]
-    failures = gate_failures or []
+    title = _md(title)
+    failures = [_md(f) for f in (gate_failures or [])]
     status = "🔴 gate failed" if failures else "🟢 judges within limits"
     lines = [
         "<!-- judgeflake -->",
@@ -462,7 +472,7 @@ def to_markdown(report: dict, title: str = "judgeflake report", gate_failures: l
         acc = j["accuracy"]
         sa = f"{j['self_agreement']:.0%}" if j["self_agreement"] is not None else "—"
         vs_human = "{:.0%} (κ {:.2f})".format(acc["accuracy"], acc["kappa"]) if acc else "—"
-        lines.append(f"| `{j['name']}` | {sa} | {len(j['flip_cases'])}/{j['cases']} | {vs_human} | {j['reading']} |")
+        lines.append(f"| `{_md(j['name'])}` | {sa} | {len(j['flip_cases'])}/{j['cases']} | {vs_human} | {j['reading']} |")
     ag = report.get("agreement")
     if ag and ag["alpha_majority"] is not None:
         lines += ["", f"Judges agree with each other: alpha {ag['alpha_majority']:.2f} ({ag['alpha_reading']})."]
@@ -470,12 +480,12 @@ def to_markdown(report: dict, title: str = "judgeflake report", gate_failures: l
     if gate and gate["judges"]:
         lines += ["", f"Gate risk at pass mark {gate['pass_mark']:g}:"]
         for g in gate["judges"]:
-            lines.append(f"- `{g['judge']}`: expected {g['expected']:.2f}, false alarm {g['false_alarm']:.0%}, safe mark {g['safe_mark']:.2f}")
+            lines.append(f"- `{_md(g['judge'])}`: expected {g['expected']:.2f}, false alarm {g['false_alarm']:.0%}, safe mark {g['safe_mark']:.2f}")
     if report["flaky_cases"]:
-        lines += ["", "<details><summary>Flakiest cases</summary>", "", "| case | disagreement | " + " | ".join(j["name"] for j in report["judges"]) + " | human |", "|---|---:|" + "---|" * len(report["judges"]) + "---|"]
+        lines += ["", "<details><summary>Flakiest cases</summary>", "", "| case | disagreement | " + " | ".join(_md(j["name"]) for j in report["judges"]) + " | human |", "|---|---:|" + "---|" * len(report["judges"]) + "---|"]
         for f in report["flaky_cases"][:10]:
-            cells = " | ".join(" ".join(_fmt_value(v) for v in f["verdicts"].get(j["name"], [])) for j in report["judges"])
-            lines.append(f"| `{f['case_id']}` | {f['disagreement']:.0%} | {cells} | {_fmt_value(f['label']) if f['label'] is not None else '—'} |")
+            cells = " | ".join(" ".join(_md(_fmt_value(v)) for v in f["verdicts"].get(j["name"], [])) for j in report["judges"])
+            lines.append(f"| `{_md(f['case_id'])}` | {f['disagreement']:.0%} | {cells} | {_md(_fmt_value(f['label'])) if f['label'] is not None else '—'} |")
         lines += ["", "</details>"]
     if failures:
         lines += ["", "**Gate failures:** " + "; ".join(failures)]

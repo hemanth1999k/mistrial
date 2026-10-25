@@ -68,18 +68,31 @@ runs:
     - name: Run the reliability card
       id: run
       shell: bash
+      # Inputs go through the environment, never into the script text, so a value with a quote
+      # or a semicolon is data and not shell.
+      env:
+        JF_CASES: ${{ inputs.cases }}
+        JF_JUDGES: ${{ inputs.judges }}
+        JF_RUNS: ${{ inputs.runs }}
+        JF_RUBRIC: ${{ inputs.rubric }}
+        JF_ADAPTIVE: ${{ inputs.adaptive }}
+        JF_MIN_SELF: ${{ inputs.min-self-agreement }}
+        JF_MAX_FLIP: ${{ inputs.max-flip-rate }}
+        JF_MIN_AGREE: ${{ inputs.min-agreement }}
+        JF_PASS_MARK: ${{ inputs.pass-mark }}
+        JF_TITLE: judgeflake · ${{ github.repository }}
       run: |
         set +e
         args=()
-        for j in ${{ inputs.judges }}; do args+=(--judge "$j"); done
-        [ -n "${{ inputs.min-self-agreement }}" ] && args+=(--min-self-agreement "${{ inputs.min-self-agreement }}")
-        [ -n "${{ inputs.max-flip-rate }}" ] && args+=(--max-flip-rate "${{ inputs.max-flip-rate }}")
-        [ -n "${{ inputs.min-agreement }}" ] && args+=(--min-agreement "${{ inputs.min-agreement }}")
-        [ -n "${{ inputs.pass-mark }}" ] && args+=(--pass-mark "${{ inputs.pass-mark }}")
-        [ "${{ inputs.adaptive }}" = "true" ] && args+=(--adaptive)
+        for j in $JF_JUDGES; do args+=(--judge "$j"); done
+        [ -n "$JF_MIN_SELF" ] && args+=(--min-self-agreement "$JF_MIN_SELF")
+        [ -n "$JF_MAX_FLIP" ] && args+=(--max-flip-rate "$JF_MAX_FLIP")
+        [ -n "$JF_MIN_AGREE" ] && args+=(--min-agreement "$JF_MIN_AGREE")
+        [ -n "$JF_PASS_MARK" ] && args+=(--pass-mark "$JF_PASS_MARK")
+        [ "$JF_ADAPTIVE" = "true" ] && args+=(--adaptive)
         mkdir -p .judgeflake
-        judgeflake run "${{ inputs.cases }}" "${args[@]}" --runs "${{ inputs.runs }}" --rubric "${{ inputs.rubric }}" \
-          --html .judgeflake/report.html --markdown .judgeflake/comment.md --title "judgeflake · ${{ github.repository }}"
+        judgeflake run "$JF_CASES" "${args[@]}" --runs "$JF_RUNS" --rubric "$JF_RUBRIC" \
+          --html .judgeflake/report.html --markdown .judgeflake/comment.md --title "$JF_TITLE"
         code=$?
         echo "exit-code=$code" >> "$GITHUB_OUTPUT"
         echo "markdown=.judgeflake/comment.md" >> "$GITHUB_OUTPUT"
@@ -91,9 +104,11 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github-token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        REPO: ${{ github.repository }}
       run: |
-        pr=${{ github.event.pull_request.number }}
-        repo=${{ github.repository }}
+        pr="$PR_NUMBER"
+        repo="$REPO"
         body=$(cat .judgeflake/comment.md)
         existing=$(gh api "repos/$repo/issues/$pr/comments" --paginate --jq '.[] | select(.body | startswith("<!-- judgeflake -->")) | .id' | head -1)
         if [ -n "$existing" ]; then
