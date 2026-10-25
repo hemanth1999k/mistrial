@@ -1,0 +1,20 @@
+{"id": "capital-france", "inputs": "What is the capital of France?", "outputs": "Paris.", "reference_outputs": "Paris", "label": true}
+{"id": "capital-australia", "inputs": "What is the capital of Australia?", "outputs": "Sydney.", "reference_outputs": "Canberra", "label": false}
+{"id": "boiling-point", "inputs": "At what temperature does water boil at sea level, in Celsius?", "outputs": "Water boils at 100 degrees Celsius at sea level.", "reference_outputs": "100 °C", "label": true}
+{"id": "largest-planet", "inputs": "Which is the largest planet in the solar system?", "outputs": "Jupiter is the largest, followed by Saturn.", "reference_outputs": "Jupiter", "label": true}
+{"id": "python-list-length", "inputs": "How do you get the number of items in a Python list `xs`?", "outputs": "Use xs.length", "reference_outputs": "len(xs)", "label": false}
+{"id": "primes-under-10", "inputs": "List the prime numbers under 10.", "outputs": "2, 3, 5, 7 and 9", "reference_outputs": "2, 3, 5, 7", "label": false}
+{"id": "square-root-144", "inputs": "What is the square root of 144?", "outputs": "12", "reference_outputs": "12", "label": true}
+{"id": "author-1984", "inputs": "Who wrote the novel 1984?", "outputs": "George Orwell wrote 1984, published in 1949.", "reference_outputs": "George Orwell", "label": true}
+{"id": "days-in-leap-year", "inputs": "How many days are in a leap year?", "outputs": "365", "reference_outputs": "366", "label": false}
+{"id": "http-404", "inputs": "What does HTTP status 404 mean?", "outputs": "The server could not find the requested resource.", "reference_outputs": "Not Found: the requested resource does not exist on the server", "label": true}
+{"id": "speed-of-light", "inputs": "What is the speed of light in a vacuum, roughly, in km/s?", "outputs": "About 300,000 km per second.", "reference_outputs": "approximately 299,792 km/s", "label": true}
+{"id": "chemical-symbol-gold", "inputs": "What is the chemical symbol for gold?", "outputs": "Ag", "reference_outputs": "Au", "label": false}
+{"id": "fibonacci-10th", "inputs": "What is the 10th Fibonacci number if F(1)=1 and F(2)=1?", "outputs": "55", "reference_outputs": "55", "label": true}
+{"id": "ambiguous-tallest", "inputs": "What is the tallest mountain on Earth?", "outputs": "Mauna Kea, if measured from its base on the ocean floor.", "reference_outputs": "Mount Everest", "label": false}
+{"id": "partial-ingredients", "inputs": "Name the three primary colors of light.", "outputs": "Red and green.", "reference_outputs": "Red, green and blue", "label": false}
+{"id": "rounding", "inputs": "What is 2/3 as a decimal, to two places?", "outputs": "0.67", "reference_outputs": "0.67", "label": true}
+{"id": "sql-count", "inputs": "Write SQL to count rows in a table named users.", "outputs": "SELECT COUNT(*) FROM users;", "reference_outputs": "SELECT COUNT(*) FROM users", "label": true}
+{"id": "unit-mixup", "inputs": "How many centimeters are in a meter?", "outputs": "1000", "reference_outputs": "100", "label": false}
+{"id": "hedged-answer", "inputs": "Is the Pacific the largest ocean?", "outputs": "I believe so, though the Atlantic is also very large.", "reference_outputs": "Yes", "label": true}
+{"id": "date-format", "inputs": "Write 4 July 2026 in ISO 8601 format.", "outputs": "2026-07-04", "reference_outputs": "2026-07-04", "label": true}

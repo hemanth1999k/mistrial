@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.judgeflake/
+report.html
+report.json
+.DS_Store
