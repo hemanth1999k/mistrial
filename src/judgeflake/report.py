@@ -19,7 +19,37 @@ from .runner import RunResult, by_judge
 # -------------------------------------------------------------------------------- analyze --
 
 
-def analyze(result: RunResult, top: int = 10) -> dict:
+PARSE_MODES = ("json", "fenced", "embedded", "no-verdict", "error")
+
+
+def _parser_audit(name: str, verdicts: list) -> dict | None:
+    """How the judge's replies were read. None for judges that don't produce text (functions, demo)."""
+    mine = [v for v in verdicts if v.judge == name]
+    if not any(v.text is not None or v.parse not in (None, "error") for v in mine):
+        return None
+    counts = Counter((v.parse or "error") for v in mine)
+    total = sum(counts.values())
+    strict = counts.get("json", 0)
+    lenient = counts.get("fenced", 0) + counts.get("embedded", 0)
+    failed = counts.get("no-verdict", 0) + counts.get("error", 0)
+    examples = [
+        {"case_id": v.case_id, "run": v.run, "parse": v.parse, "text": (v.text or v.error or "")[:240]}
+        for v in mine
+        if v.parse in ("embedded", "no-verdict", "error")
+    ][:5]
+    reading = "clean" if failed == 0 and lenient == 0 else "lenient" if failed == 0 else "fragile"
+    return {
+        "total": total,
+        "counts": {m: counts.get(m, 0) for m in PARSE_MODES},
+        "strict_rate": round(strict / total, 4) if total else None,
+        "lenient_rate": round(lenient / total, 4) if total else None,
+        "failed_rate": round(failed / total, 4) if total else None,
+        "reading": reading,
+        "examples": examples,
+    }
+
+
+def analyze(result: RunResult, top: int = 10, pass_mark: float | None = None, runs_in_ci: int = 1) -> dict:
     """Everything the report shows, as plain data. Formulas live in stats.py."""
     values = by_judge(result)
     labels = {c.id: c.label for c in result.cases if c.label is not None}
@@ -32,6 +62,7 @@ def analyze(result: RunResult, top: int = 10) -> dict:
 
     judges = []
     majorities: dict[str, dict[str, Any]] = {}
+    gates = []
     for j in result.judges:
         name = j["name"]
         cons = stats.consistency(name, values.get(name, {}))
@@ -39,6 +70,10 @@ def analyze(result: RunResult, top: int = 10) -> dict:
         majorities[name] = maj
         acc = stats.accuracy(name, maj, labels) if labels else None
         lat = latency.get(name, [])
+        if pass_mark is not None:
+            g = stats.gate_risk(name, values.get(name, {}), pass_mark, runs_in_ci=runs_in_ci)
+            if g:
+                gates.append(asdict(g))
         judges.append(
             {
                 "name": name,
@@ -47,6 +82,7 @@ def analyze(result: RunResult, top: int = 10) -> dict:
                 "runs": cons.runs,
                 "errors": errors.get(name, 0),
                 "cached": cached.get(name, 0),
+                "parser": _parser_audit(name, result.verdicts),
                 "mean_latency_ms": round(sum(lat) / len(lat), 1) if lat else None,
                 "numeric": cons.numeric,
                 "flip_rate": round(cons.flip_rate, 4),
@@ -56,6 +92,7 @@ def analyze(result: RunResult, top: int = 10) -> dict:
                 "mean_spread": round(cons.mean_spread, 4) if cons.mean_spread is not None else None,
                 "reading": stats.read_self_agreement(cons.self_agreement),
                 "majorities": maj,
+                "all_values": {c.case_id: list(c.values) for c in cons.per_case},
                 "accuracy": (
                     {
                         "cases": acc.cases,
@@ -101,9 +138,12 @@ def analyze(result: RunResult, top: int = 10) -> dict:
             "labels": len(labels),
             "duration_s": round(result.duration_s, 2),
             "calls": len(result.verdicts),
+            "adaptive": result.adaptive,
+            "calls_saved": result.calls_saved,
         },
         "judges": judges,
         "agreement": agreement,
+        "gate": {"pass_mark": pass_mark, "runs_in_ci": runs_in_ci, "judges": gates} if pass_mark is not None else None,
         "flaky_cases": flaky,
         "cases": {c.id: {"inputs": c.inputs, "outputs": c.outputs, "reference_outputs": c.reference_outputs, "label": c.label} for c in result.cases},
     }
@@ -198,9 +238,54 @@ def print_report(report: dict, console: Console | None = None) -> None:
             t3.add_row(*row)
         con.print(t3)
 
+    audits = [(j["name"], j["parser"]) for j in report["judges"] if j.get("parser")]
+    if audits:
+        con.print()
+        t4 = Table(title="Parser audit (how the replies were read)", title_justify="left")
+        t4.add_column("judge", style="bold")
+        t4.add_column("strict JSON", justify="right")
+        t4.add_column("fenced/embedded", justify="right")
+        t4.add_column("no verdict", justify="right")
+        t4.add_column("reading")
+        for name, p in audits:
+            c = p["counts"]
+            color = {"clean": "green", "lenient": "yellow", "fragile": "red"}[p["reading"]]
+            t4.add_row(name, f"{c['json']}/{p['total']}", str(c["fenced"] + c["embedded"]), str(c["no-verdict"] + c["error"]), f"[{color}]{p['reading']}[/{color}]")
+        con.print(t4)
+        for name, p in audits:
+            for ex in p["examples"][:3]:
+                con.print(f"  [dim]{name} · {ex['case_id']} · run {ex['run']} · {ex['parse']}:[/dim] {ex['text'][:120]!r}")
+
+    gate = report.get("gate")
+    if gate and gate["judges"]:
+        con.print()
+        t5 = Table(title=f"Gate risk (pass mark {gate['pass_mark']:g}, {gate['runs_in_ci']} run{'s' if gate['runs_in_ci'] != 1 else ''} per case in CI)", title_justify="left")
+        t5.add_column("judge", style="bold")
+        t5.add_column("expected score", justify="right")
+        t5.add_column("90% range", justify="right")
+        t5.add_column("false alarm", justify="right")
+        t5.add_column("safe mark", justify="right")
+        t5.add_column("fix")
+        for g in gate["judges"]:
+            fa = g["false_alarm"]
+            color = "green" if fa <= 0.05 else "yellow" if fa <= 0.2 else "red"
+            if g["expected"] < g["pass_mark"]:
+                fix = "already below the mark on average"
+            elif fa <= 0.05:
+                fix = "fine as is"
+            elif g["runs_for_5pct"]:
+                fix = f"{g['runs_for_5pct']} runs per case, or mark ≤ {g['safe_mark']:.2f}"
+            else:
+                fix = f"lower the mark to {g['safe_mark']:.2f}"
+            t5.add_row(g["judge"], f"{g['expected']:.2f}", f"{g['p5']:.2f}–{g['p95']:.2f}", f"[{color}]{fa:.0%}[/{color}]", f"{g['safe_mark']:.2f}", fix)
+        con.print(t5)
+        con.print("[dim]false alarm = how often this gate goes red with nothing changed, from re-sampling each case's observed verdicts.[/dim]")
+
     con.print()
     for line in headline(report):
         con.print(f"• {line}")
+    if m.get("adaptive"):
+        con.print(f"• adaptive: re-asked only where the first two runs disagreed; skipped {m['calls_saved']} calls")
     con.print()
 
 
@@ -290,16 +375,50 @@ def to_html(report: dict, title: str = "judgeflake report") -> str:
             )
         flaky_html = f"<h2>Flakiest cases</h2><p class='meta'>Every judge's verdicts for the case, one chip per run. Disagreement is 1 minus the share of the overall majority.</p><table><tr><th>case</th><th class='r'>disagreement</th>{head}<th>human</th></tr>{''.join(rows)}</table>"
 
+    audit_html = ""
+    audits = [(j["name"], j["parser"]) for j in report["judges"] if j.get("parser")]
+    if audits:
+        rows = []
+        for name, p in audits:
+            c = p["counts"]
+            ex = "".join(f"<pre>{e(x['case_id'])} · run {x['run']} · {e(str(x['parse']))}\n{e(x['text'])}</pre>" for x in p["examples"][:3])
+            det = f"<details><summary>examples</summary>{ex}</details>" if ex else ""
+            rows.append(
+                f"<tr><td><b>{e(name)}</b>{det}</td><td class='r'>{c['json']}/{p['total']}</td><td class='r'>{c['fenced'] + c['embedded']}</td><td class='r'>{c['no-verdict'] + c['error']}</td><td class='{ {'clean': 'ok', 'lenient': 'warn', 'fragile': 'bad'}[p['reading']] } read'>{e(p['reading'])}</td></tr>"
+            )
+        audit_html = f"<h2>Parser audit</h2><p class='meta'>How each reply was read. Replies that needed the lenient path (a code fence, JSON buried in prose) are one bad day from unparseable, and a parsing change can flip verdicts the model never changed.</p><table><tr><th>judge</th><th class='r'>strict JSON</th><th class='r'>fenced / embedded</th><th class='r'>no verdict</th><th>reading</th></tr>{''.join(rows)}</table>"
+
+    gate_html = ""
+    gate = report.get("gate")
+    if gate and gate["judges"]:
+        rows = []
+        for g in gate["judges"]:
+            fa = g["false_alarm"]
+            cls = "ok" if fa <= 0.05 else "warn" if fa <= 0.2 else "bad"
+            if g["expected"] < g["pass_mark"]:
+                fix = "already below the mark on average"
+            elif fa <= 0.05:
+                fix = "fine as is"
+            elif g["runs_for_5pct"]:
+                fix = f"{g['runs_for_5pct']} runs per case, or a mark of {g['safe_mark']:.2f}"
+            else:
+                fix = f"lower the mark to {g['safe_mark']:.2f}"
+            rows.append(f"<tr><td><b>{e(g['judge'])}</b></td><td class='r'>{g['expected']:.2f}</td><td class='r'>{g['p5']:.2f}–{g['p95']:.2f}</td><td class='r {cls}'><b>{fa:.0%}</b></td><td class='r'>{g['safe_mark']:.2f}</td><td>{e(fix)}</td></tr>")
+        gate_html = f"<h2>Gate risk</h2><p class='meta'>Pass mark {gate['pass_mark']:g}, {gate['runs_in_ci']} run(s) per case in CI. False alarm is how often the gate goes red with nothing changed, from re-sampling each case's observed verdicts {gate['judges'][0]['draws']} times.</p><table><tr><th>judge</th><th class='r'>expected</th><th class='r'>90% range</th><th class='r'>false alarm</th><th class='r'>safe mark</th><th>fix</th></tr>{''.join(rows)}</table>"
+
+    adaptive = f"<p class='meta'>Adaptive: re-asked only where the first two runs disagreed; skipped {m['calls_saved']} calls.</p>" if m.get("adaptive") else ""
     heads = "".join(f"<li>{e(line)}</li>" for line in headline(report))
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(title)}</title><style>{_CSS}</style></head>
 <body><main>
 <h1>{e(title)}</h1>
 <p class="meta">{m['cases']} cases · {m['judges']} judge{'s' if m['judges'] != 1 else ''} · {m['runs']} runs each · {m['calls']} verdicts · rubric {e(str(m['rubric'] or '—'))} · {e(m['created'])}</p>
-<ul class="head">{heads}</ul>
+<ul class="head">{heads}</ul>{adaptive}
 <h2>Consistency (same judge, asked again)</h2>
 <div class="grid">{''.join(cards)}</div>
 {ag_html}
+{gate_html}
 {flaky_html}
+{audit_html}
 <footer>Made with judgeflake. Formulas: "two runs agree" = mean over cases of the share of run pairs with equal verdicts; flip rate = cases with more than one distinct verdict across runs; Cohen's kappa and Krippendorff's alpha as standard; kappa readings use Landis &amp; Koch bands.</footer>
 </main></body></html>"""
 
@@ -310,13 +429,111 @@ def _s(v: Any) -> str:
     return v if isinstance(v, str) else json.dumps(v, ensure_ascii=False, indent=2)
 
 
-def write_outputs(report: dict, result: RunResult, html_path: Path | None, json_path: Path | None, title: str = "judgeflake report") -> None:
+def write_outputs(report: dict, result: RunResult, html_path: Path | None, json_path: Path | None, title: str = "judgeflake report", markdown_path: Path | None = None, gate_failures: list[str] | None = None) -> None:
     if json_path:
         json_path.parent.mkdir(parents=True, exist_ok=True)
         json_path.write_text(json.dumps({"report": report, "run": result.to_dict()}, indent=2, default=str))
     if html_path:
         html_path.parent.mkdir(parents=True, exist_ok=True)
         html_path.write_text(to_html(report, title))
+    if markdown_path:
+        markdown_path.parent.mkdir(parents=True, exist_ok=True)
+        markdown_path.write_text(to_markdown(report, title, gate_failures or []))
+
+
+# ------------------------------------------------------------------------------- markdown --
+
+
+def to_markdown(report: dict, title: str = "judgeflake report", gate_failures: list[str] | None = None) -> str:
+    """The card as a GitHub-flavoured markdown comment (what the GitHub Action posts on a PR)."""
+    m = report["meta"]
+    failures = gate_failures or []
+    status = "🔴 gate failed" if failures else "🟢 judges within limits"
+    lines = [
+        "<!-- judgeflake -->",
+        f"### {title} · {status}",
+        "",
+        f"{m['cases']} cases · {m['judges']} judge{'s' if m['judges'] != 1 else ''} · {m['runs']} runs each · {m['calls']} verdicts",
+        "",
+        "| judge | self-agreement | flipped | vs human | reading |",
+        "|---|---:|---:|---:|---|",
+    ]
+    for j in report["judges"]:
+        acc = j["accuracy"]
+        sa = f"{j['self_agreement']:.0%}" if j["self_agreement"] is not None else "—"
+        vs_human = "{:.0%} (κ {:.2f})".format(acc["accuracy"], acc["kappa"]) if acc else "—"
+        lines.append(f"| `{j['name']}` | {sa} | {len(j['flip_cases'])}/{j['cases']} | {vs_human} | {j['reading']} |")
+    ag = report.get("agreement")
+    if ag and ag["alpha_majority"] is not None:
+        lines += ["", f"Judges agree with each other: alpha {ag['alpha_majority']:.2f} ({ag['alpha_reading']})."]
+    gate = report.get("gate")
+    if gate and gate["judges"]:
+        lines += ["", f"Gate risk at pass mark {gate['pass_mark']:g}:"]
+        for g in gate["judges"]:
+            lines.append(f"- `{g['judge']}`: expected {g['expected']:.2f}, false alarm {g['false_alarm']:.0%}, safe mark {g['safe_mark']:.2f}")
+    if report["flaky_cases"]:
+        lines += ["", "<details><summary>Flakiest cases</summary>", "", "| case | disagreement | " + " | ".join(j["name"] for j in report["judges"]) + " | human |", "|---|---:|" + "---|" * len(report["judges"]) + "---|"]
+        for f in report["flaky_cases"][:10]:
+            cells = " | ".join(" ".join(_fmt_value(v) for v in f["verdicts"].get(j["name"], [])) for j in report["judges"])
+            lines.append(f"| `{f['case_id']}` | {f['disagreement']:.0%} | {cells} | {_fmt_value(f['label']) if f['label'] is not None else '—'} |")
+        lines += ["", "</details>"]
+    if failures:
+        lines += ["", "**Gate failures:** " + "; ".join(failures)]
+    lines += ["", "<sub>judgeflake · self-agreement is the chance two runs give the same verdict on a case</sub>"]
+    return "\n".join(lines) + "\n"
+
+
+# ----------------------------------------------------------------------------- escalation --
+
+
+def escalation(report: dict, min_disagreement: float = 0.0, include_misses: bool = True) -> list[dict]:
+    """The cases a human should look at: everything the judges disagreed on, plus judge-vs-label misses."""
+    rows: dict[str, dict] = {}
+    cases = report["cases"]
+    for f in stats_flaky_all(report):
+        if f["disagreement"] > min_disagreement:
+            c = cases.get(f["case_id"], {})
+            rows[f["case_id"]] = {
+                "case_id": f["case_id"],
+                "reason": "judges disagree",
+                "disagreement": f["disagreement"],
+                "verdicts": {j: " ".join(_fmt_value(v) for v in vs) for j, vs in f["verdicts"].items()},
+                "label": f["label"],
+                "inputs": c.get("inputs"),
+                "outputs": c.get("outputs"),
+                "reference_outputs": c.get("reference_outputs"),
+            }
+    if include_misses:
+        for j in report["judges"]:
+            if not j["accuracy"]:
+                continue
+            for miss in j["accuracy"]["misses"]:
+                cid = miss["case_id"]
+                if cid in rows:
+                    rows[cid]["reason"] = "judges disagree, and a judge misses the label"
+                    continue
+                c = cases.get(cid, {})
+                rows[cid] = {
+                    "case_id": cid,
+                    "reason": f"{j['name']} says {_fmt_value(miss['judge'])}, label says {_fmt_value(miss['label'])}",
+                    "disagreement": 0.0,
+                    "verdicts": {j["name"]: _fmt_value(miss["judge"])},
+                    "label": miss["label"],
+                    "inputs": c.get("inputs"),
+                    "outputs": c.get("outputs"),
+                    "reference_outputs": c.get("reference_outputs"),
+                }
+    return sorted(rows.values(), key=lambda r: (-r["disagreement"], r["case_id"]))
+
+
+def stats_flaky_all(report: dict) -> list[dict]:
+    """Every case with any disagreement, not just the top N the card shows."""
+    pooled: dict[str, dict[str, list]] = {j["name"]: dict(j.get("all_values", {})) for j in report["judges"]}
+    labels = {cid: c["label"] for cid, c in report["cases"].items() if c.get("label") is not None}
+    out = []
+    for f in stats.flaky_cases(pooled, labels, top=len(pooled) or 1):
+        out.append({"case_id": f.case_id, "disagreement": f.disagreement, "verdicts": f.verdicts, "label": f.label})
+    return out
 
 
 # -------------------------------------------------------------------------------- compare --

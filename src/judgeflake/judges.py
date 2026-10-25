@@ -38,6 +38,8 @@ class Verdict:
     error: str | None = None
     latency_ms: float = 0.0
     cached: bool = False
+    text: str | None = None  # the model's raw reply, for the parser audit (LLM judges only)
+    parse: str | None = None  # how the verdict was read: json, fenced, embedded, no-verdict, error
 
     def to_dict(self) -> dict:
         return {
@@ -50,14 +52,39 @@ class Verdict:
             "error": self.error,
             "latency_ms": round(self.latency_ms, 1),
             "cached": self.cached,
+            "text": self.text,
+            "parse": self.parse,
         }
+
+
+@dataclass
+class Response:
+    """What a judge hands back. Iterable as (raw, rationale, cached) for older callers."""
+
+    raw: Any
+    rationale: str | None = None
+    cached: bool = False
+    text: str | None = None
+    parse: str | None = None
+
+    def __iter__(self):
+        yield self.raw
+        yield self.rationale
+        yield self.cached
+
+
+def as_response(x: Any) -> Response:
+    if isinstance(x, Response):
+        return x
+    raw, rationale, cached = x
+    return Response(raw, rationale, cached)
 
 
 class Judge(Protocol):
     name: str
 
-    async def judge(self, case: Case, run: int, cache: Cache) -> tuple[Any, str | None, bool]:
-        """Return (raw result, rationale, came_from_cache). Raise on failure."""
+    async def judge(self, case: Case, run: int, cache: Cache) -> Any:
+        """Return a Response or a (raw result, rationale, came_from_cache) tuple. Raise on failure."""
         ...
 
     def describe(self) -> dict: ...
@@ -82,11 +109,14 @@ class DemoJudge:
     seed: int = 0
     kind: str = "bool"  # "bool" or "score" (1-5)
     latency_ms: float = 0.0
+    salt: str = ""  # a rubric variant: changes which cases wobble, like a reworded prompt would
+    invert: bool = False  # a reversed rubric: the demo judge honours it on most cases, not all
+    invert_misses: float = 0.1  # share of cases where the demo judge ignores the reversed rubric
 
     async def judge(self, case: Case, run: int, cache: Cache) -> tuple[Any, str | None, bool]:
         if self.latency_ms:
             await asyncio.sleep(self.latency_ms / 1000)
-        rng = random.Random(f"{self.name}:{self.seed}:{case.id}:{run}")
+        rng = random.Random(f"{self.name}:{self.seed}:{self.salt}:{case.id}:{run}")
         base_rng = random.Random(f"{self.name}:{self.seed}:{case.id}")
         if self.kind == "score":
             truth = case.label if isinstance(case.label, (int, float)) and not isinstance(case.label, bool) else base_rng.randint(1, 5)
@@ -100,10 +130,17 @@ class DemoJudge:
             value = True  # lenient on this case, every run
         elif rng.random() < self.flakiness:
             value = not value
+        if self.invert and random.Random(f"{self.name}:{self.seed}:invert:{case.id}").random() >= self.invert_misses:
+            value = not value
         return {"score": value, "reasoning": "demo judge"}, "demo judge", False
 
     def describe(self) -> dict:
-        return {"kind": "demo", "name": self.name, "flakiness": self.flakiness, "bias": self.bias, "seed": self.seed, "output": self.kind}
+        d = {"kind": "demo", "name": self.name, "flakiness": self.flakiness, "bias": self.bias, "seed": self.seed, "output": self.kind}
+        if self.salt:
+            d["salt"] = self.salt
+        if self.invert:
+            d["invert"] = True
+        return d
 
 
 # ------------------------------------------------------------------------------- callable --
@@ -271,12 +308,18 @@ class LLMJudge:
         key = key_for("llm", self.provider, self.model, self.temperature, self.reasoning_effort, SYSTEM, prompt, run)
         hit = cache.get(key)
         if hit is not None:
-            return hit["raw"], hit.get("rationale"), True
+            if hit.get("raw") is None and hit.get("parse") == "error":
+                raise ValueError(f"no JSON verdict in reply (cached): {str(hit.get('text'))[:120]!r}")
+            return Response(hit["raw"], hit.get("rationale"), True, text=hit.get("text"), parse=hit.get("parse"))
         text = await self._complete(prompt)
-        raw = parse_json_verdict(text)
+        try:
+            raw, how = parse_json_verdict(text, how=True)
+        except ValueError:
+            cache.put(key, {"raw": None, "rationale": None, "text": text, "parse": "error"})
+            raise
         rationale = raw.get("reasoning") if isinstance(raw, dict) else None
-        cache.put(key, {"raw": raw, "rationale": rationale, "text": text})
-        return raw, rationale, False
+        cache.put(key, {"raw": raw, "rationale": rationale, "text": text, "parse": how})
+        return Response(raw, rationale, False, text=text, parse=how)
 
     async def _complete(self, prompt: str) -> str:
         client = self._client or httpx.AsyncClient(timeout=self.timeout)
@@ -362,33 +405,146 @@ class LLMJudge:
 _JSON_RE = re.compile(r"\{.*\}", re.S)
 
 
-def parse_json_verdict(text: str) -> Any:
-    """Find the JSON object in a model reply. Tolerates code fences and chatter around it."""
+def parse_json_verdict(text: str, how: bool = False) -> Any:
+    """Find the JSON object in a model reply. Tolerates code fences and chatter around it.
+
+    With how=True returns (object, mode) where mode is "json" (the whole reply was JSON),
+    "fenced" (inside a code fence) or "embedded" (found inside other text). The parser audit
+    counts these, because a judge that needs the lenient paths is one bad day from unparseable.
+    """
     s = text.strip()
+    mode = "json"
     if s.startswith("```"):
         s = re.sub(r"^```(?:json)?\s*|\s*```$", "", s, flags=re.S)
+        mode = "fenced"
     try:
-        return json.loads(s)
+        obj = json.loads(s)
+        return (obj, mode) if how else obj
     except json.JSONDecodeError:
         pass
     m = _JSON_RE.search(s)
     if m:
         try:
-            return json.loads(m.group(0))
+            obj = json.loads(m.group(0))
+            return (obj, "embedded") if how else obj
         except json.JSONDecodeError:
             pass
     raise ValueError(f"no JSON verdict in reply: {text[:120]!r}")
 
 
+# ------------------------------------------------------------------------------ stabilize --
+
+
+@dataclass
+class StabilizedJudge:
+    """Ask an inner judge k times and return the majority (or median for numbers).
+
+    This is the fix for a flaky judge, as a judge: the same signature, k times the cost, and a
+    verdict that flips far less often. Run it through judgeflake like any other judge to measure
+    exactly how much less.
+    """
+
+    inner: Any
+    k: int = 5
+    name: str = ""
+
+    def __post_init__(self) -> None:
+        if self.k < 1:
+            raise ValueError("k must be at least 1")
+        self.name = self.name or f"{self.inner.name}×{self.k}"
+
+    async def judge(self, case: Case, run: int, cache: Cache) -> Response:
+        from .stats import as_number, is_numeric, majority, normalize, pairwise_agreement
+
+        # Sample indices never overlap between runs, so run 0 and run 1 are fresh samples.
+        responses = await asyncio.gather(*(self.inner.judge(case, run * self.k + i, cache) for i in range(self.k)))
+        rs = [as_response(r) for r in responses]
+        votes = [normalize(r.raw) for r in rs]
+        if is_numeric(votes) and not all(isinstance(v, bool) for v in votes):
+            nums = sorted(as_number(v) for v in votes)
+            mid = len(nums) // 2
+            value: Any = nums[mid] if len(nums) % 2 else (nums[mid - 1] + nums[mid]) / 2
+        else:
+            value, _ = majority(votes)
+        agreement = pairwise_agreement(votes)
+        rationale = next((r.rationale for r in rs if r.rationale), None)
+        raw = {"score": value, "votes": votes, "agreement": agreement, "reasoning": rationale}
+        return Response(raw, rationale, all(r.cached for r in rs))
+
+    def describe(self) -> dict:
+        return {"kind": "stabilized", "name": self.name, "k": self.k, "inner": self.inner.describe()}
+
+
+def stabilize(judge: Any, k: int = 5, *, name: str | None = None, cache: Cache | None = None, **judge_kw: Any) -> Callable[..., dict]:
+    """Wrap an evaluator into a k-sample majority vote with the same signature.
+
+    `judge` is a spec string ("openai:gpt-5-mini", "my_evals:fn"), a Judge, or a plain function
+    with the evaluator signature. Returns a function fn(inputs=, outputs=, reference_outputs=)
+    that returns {"key", "score", "comment", "judgeflake": {"votes", "agreement"}}. Plug it into
+    LangSmith or openevals in place of the flaky one.
+    """
+    if isinstance(judge, str):
+        inner = build_judge(judge, **judge_kw)
+    elif callable(judge) and not hasattr(judge, "judge"):
+        inner = CallableJudge(name=getattr(judge, "__name__", "evaluator"), fn=judge)
+    else:
+        inner = judge
+    sj = StabilizedJudge(inner, k=k, name=name or "")
+    store = cache or Cache(enabled=False)
+    counter = {"n": 0}
+
+    def evaluator(inputs: Any = None, outputs: Any = None, reference_outputs: Any = None, **_: Any) -> dict:
+        counter["n"] += 1
+        case = Case(id=f"call-{counter['n']}", inputs=inputs, outputs=outputs, reference_outputs=reference_outputs)
+        resp = _run_sync(sj.judge(case, 0, store))
+        raw = resp.raw
+        return {
+            "key": sj.name,
+            "score": raw["score"],
+            "comment": resp.rationale,
+            "judgeflake": {"votes": raw["votes"], "agreement": raw["agreement"], "k": k},
+        }
+
+    evaluator.__name__ = sj.name
+    evaluator.judge = sj  # type: ignore[attr-defined]
+    return evaluator
+
+
+def _run_sync(coro: Awaitable[Any]) -> Any:
+    """Run a coroutine from sync code, even when an event loop is already running (notebooks)."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)  # type: ignore[arg-type]
+    import concurrent.futures
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        return pool.submit(asyncio.run, coro).result()  # type: ignore[arg-type]
+
+
 # -------------------------------------------------------------------------------- factory --
 
 
-def build_judge(spec: str, *, rubric: str = "correctness", temperature: float | None = None, reasoning_effort: str | None = None, max_tokens: int = 1024, name: str | None = None) -> Judge:
+def build_judge(
+    spec: str,
+    *,
+    rubric: str = "correctness",
+    temperature: float | None = None,
+    reasoning_effort: str | None = None,
+    max_tokens: int = 1024,
+    name: str | None = None,
+    template: str | None = None,
+    invert: bool = False,
+    salt: str = "",
+) -> Judge:
     """Turn a CLI spec into a judge.
 
     - demo, demo:flaky, demo:steady, demo:score   -> DemoJudge presets
     - <provider>:<model> for any LLM_PROVIDERS    -> LLMJudge
     - anything else with a colon                  -> CallableJudge module:function
+
+    `template` replaces the rubric text (a rubric variant); `invert` marks a reversed rubric for
+    the demo judge; `salt` makes a demo judge behave like a reworded prompt would.
     """
     if spec == "demo" or spec.startswith("demo:"):
         preset = spec.partition(":")[2] or "default"
@@ -401,13 +557,13 @@ def build_judge(spec: str, *, rubric: str = "correctness", temperature: float | 
         }
         if preset not in presets:
             raise ValueError(f"unknown demo preset {preset!r}; use {', '.join(presets)}")
-        j = DemoJudge(**presets[preset])  # type: ignore[arg-type]
+        j = DemoJudge(**presets[preset], salt=salt, invert=invert)  # type: ignore[arg-type]
         if name:
             j.name = name
         return j
     provider = spec.partition(":")[0]
     if provider in LLM_PROVIDERS:
-        return LLMJudge.from_spec(spec, rubric=rubric, temperature=temperature, reasoning_effort=reasoning_effort, max_tokens=max_tokens, name=name or "")
+        return LLMJudge.from_spec(spec, rubric=rubric, temperature=temperature, reasoning_effort=reasoning_effort, max_tokens=max_tokens, name=name or "", template=template or "")
     return CallableJudge.from_spec(spec, name=name)
 
 

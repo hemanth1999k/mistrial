@@ -350,3 +350,206 @@ def read_self_agreement(p: float | None) -> str:
     if p >= 0.80:
         return "flaky"
     return "very flaky"
+
+
+# ------------------------------------------------------------------------------ gate risk --
+
+
+@dataclass
+class GateRisk:
+    judge: str
+    pass_mark: float
+    runs_in_ci: int
+    expected: float  # expected aggregate score under "nothing changed"
+    std: float
+    p5: float
+    p95: float
+    false_alarm: float  # P(score < pass_mark) when the true state is the one observed
+    safe_mark: float  # a pass mark the observed judge would clear 95% of the time
+    runs_for_5pct: int | None  # runs per case (majority vote) that get the false-alarm rate under 5%, if any <= 15
+    draws: int
+
+
+def _score_of(v: Value) -> float:
+    if isinstance(v, bool):
+        return 1.0 if v else 0.0
+    return as_number(v)
+
+
+def gate_risk(
+    judge: str,
+    verdicts: Mapping[str, Sequence[Value]],
+    pass_mark: float,
+    runs_in_ci: int = 1,
+    draws: int = 20000,
+    seed: int = 0,
+) -> GateRisk | None:
+    """How often a CI gate goes red when nothing changed.
+
+    Treats each case's observed verdicts as its distribution. Each draw re-samples every case
+    (majority of `runs_in_ci` samples, or one), averages into the aggregate score your gate
+    compares to `pass_mark`, and counts how often that falls below it. Pure Monte Carlo, no
+    normal approximation, so it is right for 10 cases as well as 1000.
+    """
+    import random
+    import statistics
+
+    cases = {c: list(vs) for c, vs in verdicts.items() if vs}
+    if not cases:
+        return None
+    rng = random.Random(seed)
+
+    def one_score(vs: list[Value], k: int) -> float:
+        if k <= 1:
+            return _score_of(rng.choice(vs))
+        picks = [rng.choice(vs) for _ in range(k)]
+        if all(isinstance(p, bool) for p in picks):
+            return 1.0 if sum(picks) * 2 > k else 0.0 if sum(picks) * 2 < k else _score_of(picks[0])
+        nums = sorted(_score_of(p) for p in picks)
+        mid = k // 2
+        return nums[mid] if k % 2 else (nums[mid - 1] + nums[mid]) / 2
+
+    def simulate(k: int, n: int) -> list[float]:
+        return [sum(one_score(vs, k) for vs in cases.values()) / len(cases) for _ in range(n)]
+
+    scores = sorted(simulate(runs_in_ci, draws))
+    expected = sum(scores) / len(scores)
+    std = statistics.pstdev(scores)
+    below = sum(1 for s in scores if s < pass_mark) / len(scores)
+    p5 = scores[int(0.05 * (len(scores) - 1))]
+    p95 = scores[int(0.95 * (len(scores) - 1))]
+    runs_for = None
+    if below > 0.05 and expected >= pass_mark:
+        for k in (3, 5, 7, 9, 11, 15):
+            s = simulate(k, max(2000, draws // 10))
+            if sum(1 for x in s if x < pass_mark) / len(s) <= 0.05:
+                runs_for = k
+                break
+    return GateRisk(judge, pass_mark, runs_in_ci, round(expected, 4), round(std, 4), round(p5, 4), round(p95, 4), round(below, 4), round(p5, 4), runs_for, draws)
+
+
+# -------------------------------------------------------------------------------- migrate --
+
+
+@dataclass
+class ThresholdTranslation:
+    old_judge: str
+    new_judge: str
+    cases: int
+    old_mean: float  # aggregate score (pass rate or mean score) under the old judge
+    new_mean: float
+    offset: float  # new_mean - old_mean
+    percent_agreement: float
+    kappa: float
+    changed: list[tuple[str, Value, Value]]  # cases where the majority verdict differs
+    pass_mark: float | None = None
+    translated_mark: float | None = None  # pass_mark + offset, clamped to the score range
+    per_case_threshold: float | None = None  # numeric only: a per-case cutoff on the old scale
+    translated_per_case: float | None = None  # the cutoff on the new scale that passes the same share
+
+
+def translate_threshold(
+    old_judge: str,
+    new_judge: str,
+    old: Mapping[str, Value],
+    new: Mapping[str, Value],
+    pass_mark: float | None = None,
+    per_case_threshold: float | None = None,
+) -> ThresholdTranslation:
+    """Re-anchor a pass mark when the judge changes.
+
+    `old` and `new` map case id -> majority verdict from each judge on the same cases. The
+    aggregate shift is the difference in means; a pass mark moves by that much. For numeric
+    scores a per-case cutoff is mapped by quantile: the new cutoff passes the same share of
+    cases the old one did.
+    """
+    common = sorted(c for c in old if c in new)
+    if not common:
+        raise ValueError("the two judges share no cases")
+    a = [old[c] for c in common]
+    b = [new[c] for c in common]
+    old_mean = sum(_score_of(v) for v in a) / len(a)
+    new_mean = sum(_score_of(v) for v in b) / len(b)
+    offset = new_mean - old_mean
+    changed = [(c, old[c], new[c]) for c in common if old[c] != new[c]]
+    translated = None
+    if pass_mark is not None:
+        lo = min(_score_of(v) for v in a + b)
+        hi = max(_score_of(v) for v in a + b)
+        translated = round(min(max(pass_mark + offset, lo), hi), 4)
+    per_new = None
+    if per_case_threshold is not None and is_numeric(a) and is_numeric(b) and not all(isinstance(v, bool) for v in a):
+        share = sum(1 for v in a if _score_of(v) >= per_case_threshold) / len(a)
+        bs = sorted((_score_of(v) for v in b), reverse=True)
+        k = round(share * len(bs))
+        per_new = bs[k - 1] if k >= 1 else bs[0] + 1e-9
+    return ThresholdTranslation(
+        old_judge,
+        new_judge,
+        len(common),
+        round(old_mean, 4),
+        round(new_mean, 4),
+        round(offset, 4),
+        round(percent_agreement(a, b), 4),
+        round(cohens_kappa(a, b), 4),
+        changed,
+        pass_mark,
+        translated,
+        per_case_threshold,
+        round(per_new, 4) if per_new is not None else None,
+    )
+
+
+# ------------------------------------------------------------------- rubric sensitivity --
+
+
+@dataclass
+class Sensitivity:
+    judge: str
+    variants: list[str]
+    cases: int
+    changed_cases: list[str]  # cases where the variants did not all agree
+    changed_rate: float
+    alpha: float | None  # Krippendorff's alpha across variants (units = cases)
+    vs_baseline: dict[str, float]  # variant -> share of cases whose verdict differs from the first variant
+
+
+def sensitivity(judge: str, by_variant: Mapping[str, Mapping[str, Value]]) -> Sensitivity:
+    """How much the verdict depends on the wording of the rubric.
+
+    `by_variant` maps variant name -> case id -> majority verdict under that wording. The first
+    variant is the baseline (the rubric you actually use).
+    """
+    names = list(by_variant)
+    if len(names) < 2:
+        raise ValueError("need at least two rubric variants")
+    cases = sorted(set.intersection(*(set(by_variant[n]) for n in names)))
+    changed = [c for c in cases if len({by_variant[n][c] for n in names}) > 1]
+    units = {c: [by_variant[n][c] for n in names] for c in cases}
+    vals = [v for vs in units.values() for v in vs]
+    level = "interval" if is_numeric(vals) and not all(isinstance(v, bool) for v in vals) else "nominal"
+    base = names[0]
+    vs_base = {n: round(sum(1 for c in cases if by_variant[n][c] != by_variant[base][c]) / len(cases), 4) if cases else 0.0 for n in names[1:]}
+    return Sensitivity(judge, names, len(cases), changed, round(len(changed) / len(cases), 4) if cases else 0.0, krippendorff_alpha(units, level), vs_base)
+
+
+# ------------------------------------------------------------------------------- reversal --
+
+
+@dataclass
+class Reversal:
+    judge: str
+    cases: int
+    inverted: int  # cases where the reversed rubric gave the opposite verdict (what should happen)
+    unchanged: int  # cases where it gave the same verdict (the judge ignored the rubric)
+    inversion_rate: float
+    ignored_cases: list[str]
+
+
+def reversal(judge: str, original: Mapping[str, Value], reversed_: Mapping[str, Value]) -> Reversal:
+    """Did flipping the criterion flip the verdicts? Boolean verdicts only."""
+    cases = sorted(c for c in original if c in reversed_)
+    inv = [c for c in cases if isinstance(original[c], bool) and isinstance(reversed_[c], bool) and reversed_[c] == (not original[c])]
+    same = [c for c in cases if original[c] == reversed_[c]]
+    n = len(cases)
+    return Reversal(judge, n, len(inv), len(same), round(len(inv) / n, 4) if n else 0.0, same)

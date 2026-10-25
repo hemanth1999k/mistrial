@@ -79,14 +79,32 @@ The statistics for this problem are a century old. Test-retest reliability, Cohe
 
 ## What you get
 
+The card:
+
 - **Self-agreement** per judge: the chance two runs give the same verdict on a case. Independent of how many runs you did. The headline number.
 - **Flipped cases**: which cases had more than one verdict across runs.
 - **Agreement between judges**: percent agreement and Cohen's kappa for every pair, Krippendorff's alpha across all of them.
 - **Accuracy vs human labels**: accuracy and kappa against your `label` column, plus the misses.
 - **Flakiest cases**: every verdict from every judge and run, as chips, ranked by disagreement. This is where you go to fix your rubric.
-- **Drift**: every run is saved. Compare this week's run with last week's and see which cases the judge changed its mind on.
-- **CI gate**: fail the build when a judge is flakier than you allow.
-- **Cache**: responses are stored on disk, so re-rendering a report is free and `--fresh` is explicit.
+- **Parser audit**: how each reply was read (strict JSON, code fence, buried in prose, no verdict), so a parsing problem never gets blamed on the model.
+
+The probes, each one answering a way judges go wrong in production:
+
+- **Gate risk**: how often your CI gate would go red with nothing changed, and the pass mark or run count that fixes it.
+- **Rubric sensitivity**: reword the rubric three ways with the same meaning and count the verdicts that move.
+- **Rubric reversal**: ask for "incorrect" instead of "correct" and check the verdicts invert.
+- **Migration**: switching judge models? See what moved and what your pass mark becomes on the new judge.
+- **Sentinel**: freeze a baseline on anchor cases and catch a judge that changed under you, on a schedule.
+- **Drift**: compare any two saved runs, case by case.
+
+The fixes:
+
+- **Stabilize**: wrap the judge in a K-sample majority vote, with the same evaluator signature, and measure it next to the raw one.
+- **Adaptive re-ask**: two runs everywhere, extra runs only where the two disagreed. Same numbers, a fraction of the calls.
+- **Escalate**: a CSV of the cases a human should look at, or push them to a LangSmith dataset.
+- **CI gate and GitHub Action**: fail the build when a judge is flakier than you allow, and post the card on the pull request.
+
+Responses are cached on disk, so re-rendering a report is free and `--fresh` is explicit.
 
 ## Usage
 
@@ -179,10 +197,138 @@ Exit code 1 and a one-line reason on stderr when any gate fails. Use `--min-self
 ### Re-render
 
 ```bash
-judgeflake report .judgeflake/runs/20261025-101500.json --html card.html
+judgeflake report .judgeflake/runs/20261025-101500.json --html card.html --markdown card.md
 ```
 
-No API calls. Re-renders the card from a saved run.
+No API calls. Re-renders the card from a saved run, as HTML and as the markdown the GitHub Action posts.
+
+## The probes
+
+Everything below works on the demo judges too, so you can try each one before spending a token: swap `openai:gpt-5-mini` for `demo:flaky`.
+
+### Gate risk: will my CI gate go red on its own?
+
+```bash
+judgeflake run cases.jsonl --judge openai:gpt-5-mini --runs 5 --pass-mark 0.8
+# or on a saved run
+judgeflake gate-risk .judgeflake/runs/20261025-101500.json --pass-mark 0.8 --runs-in-ci 1 --max-false-alarm 0.05
+```
+
+```
+Gate risk (pass mark 0.8, 1 run per case in CI)
+┃ judge       ┃ expected score ┃ 90% range ┃ false alarm ┃ safe mark ┃ fix                                 ┃
+│ gpt-5-mini  │           0.84 │ 0.75–0.90 │         22% │      0.75 │ 5 runs per case, or mark ≤ 0.75     │
+```
+
+Each case's observed verdicts are treated as its distribution. The gate score is re-sampled 20,000 times and "false alarm" is how often it lands below your pass mark with nothing changed. The fix column gives the pass mark the judge clears 95% of the time, or the runs-per-case majority vote that gets the alarm rate under 5%. Pure Monte Carlo, so it is right for 10 cases as well as 1,000.
+
+### Rubric sensitivity and reversal: is the score measuring the wording?
+
+```bash
+judgeflake rubric-check cases.jsonl --judge openai:gpt-5-mini --rubric correctness
+```
+
+```
+Rubric sensitivity (same meaning, different words)
+┃ judge       ┃ cases ┃ verdicts that changed ┃ alpha across wordings ┃ per wording vs v0   ┃ reading               ┃
+│ gpt-5-mini  │    20 │               5 (25%) │                  0.61 │ v1 15%, v2 20%, v3 10% │ measures the wording │
+
+Rubric reversal (ask for INCORRECT instead of correct)
+┃ judge       ┃ cases ┃ verdicts inverted ┃ unchanged ┃ reading                 ┃
+│ gpt-5-mini  │    20 │          17 (85%) │         3 │ mostly reads the rubric │
+```
+
+The built-in rubrics ship with three rewordings that mean the same thing and a reversed form. The judge runs under each; `changed` is the share of cases whose verdict depends on which wording you used, and `inverted` is the share that flipped when the criterion flipped. Bring your own wordings with `--variant my_rubric_v2.txt`. Gates: `--max-changed 0.10`, `--min-inversion 0.90`. Function judges have no rubric, so they are skipped.
+
+### Migrate: my judge model is being retired
+
+```bash
+judgeflake run cases.jsonl --judge openai:gpt-4o --judge openai:gpt-5-mini --runs 3
+judgeflake migrate .judgeflake/runs/20261025-101500.json --pass-mark 0.7
+```
+
+```
+agree on 80% of cases · kappa 0.55 (moderate) · shift +0.20
+your pass mark 0.7 on openai:gpt-4o is about 0.90 on openai:gpt-5-mini
+4 cases get a different verdict: …
+```
+
+Both judges on the same cases, the shift in aggregate score, your pass mark translated so the pass rate stays the same, and the cases that get a different verdict. For 1-to-5 rubrics, `--threshold 4` maps a per-case cutoff by quantile. The translated mark keeps your pass rate. It does not make the judges agree, so read the changed cases.
+
+### Sentinel: did the judge change under me?
+
+```bash
+# once: freeze a baseline on a small labeled anchor set that never changes
+judgeflake run anchors.jsonl --judge openai:gpt-5-mini --runs 3
+judgeflake sentinel baseline .judgeflake/runs/20261025-101500.json
+
+# on a schedule (nightly cron, CI): re-judge fresh and compare
+judgeflake sentinel check anchors.jsonl --judge openai:gpt-5-mini
+```
+
+Exit 0 `STABLE`, exit 2 `JUDGE_DRIFT` (more than `--max-changed` of anchor verdicts changed, or kappa vs human fell by more than `--max-kappa-drop`), exit 3 if the anchors themselves changed. The anchors never change, so any movement is the judge, which is how you catch a vendor's quiet model update before it blocks a release. Design credit: [judge-drift-sentinel](https://pypi.org/project/judge-drift-sentinel/).
+
+### Stabilize: the fix, as a judge
+
+```bash
+judgeflake run cases.jsonl --judge openai:gpt-5-mini --runs 5 --stabilize 5
+```
+
+Adds `openai:gpt-5-mini×5` next to the raw judge: the same judge asked five times with a majority vote (median for scores). The card shows both, so you see what K buys you before you pay for it. In code:
+
+```python
+from judgeflake import stabilize
+
+judge = stabilize("openai:gpt-5-mini", k=5)               # or stabilize(my_evaluator_fn, k=5)
+judge(inputs="2+2?", outputs="4", reference_outputs="4")
+# {"key": "openai:gpt-5-mini×5", "score": True, "comment": "...", "judgeflake": {"votes": [...], "agreement": 1.0, "k": 5}}
+```
+
+Same signature as a LangSmith or openevals evaluator, so it drops in where the flaky one was.
+
+### Adaptive re-ask: the same numbers for a third of the calls
+
+```bash
+judgeflake run cases.jsonl --judge openai:gpt-5-mini --runs 7 --adaptive
+```
+
+Every case gets two runs. Only cases where the two disagreed (or a call failed) get the remaining five. Self-agreement is estimated from pairs within each case, so settled cases lose nothing. The card reports the calls skipped.
+
+### Escalate: what should a human look at?
+
+```bash
+judgeflake escalate .judgeflake/runs/20261025-101500.json --out needs-human.csv
+judgeflake escalate .judgeflake/runs/20261025-101500.json --langsmith-dataset needs-human   # pip install langsmith
+```
+
+One row per case where judges disagreed, flipped, or missed the human label, with every verdict, the case itself, and an empty `your_verdict` column for the reviewer. The LangSmith option creates or extends a dataset with the same rows so your team can annotate them there.
+
+### GitHub Action: the card on every pull request
+
+```yaml
+# .github/workflows/judgeflake.yml
+on: [pull_request]
+jobs:
+  judge:
+    runs-on: ubuntu-latest
+    permissions: { contents: read, pull-requests: write }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: hemanth1999k/judgeflake@v0.2.0
+        with:
+          cases: evals/cases.jsonl
+          judges: "openai:gpt-5-mini my_evals:correctness"
+          runs: "3"
+          adaptive: "true"
+          min-self-agreement: "0.95"
+          pass-mark: "0.8"
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+```
+
+Posts the card as a comment on the PR (updated in place on later pushes), writes it to the job summary, uploads the HTML report as an artifact, and fails the job when a gate fails. Outside GitHub, `judgeflake run … --markdown card.md` writes the same comment for whatever posts it.
 
 ## How the numbers are computed
 
@@ -197,6 +343,10 @@ Everything lives in `src/judgeflake/stats.py`, is pure Python, and is tested aga
 | Krippendorff's alpha | 1 − D_o ÷ D_e from the coincidence matrix | nominal for labels, interval for scores, missing allowed, any number of raters |
 | accuracy | judge majority verdict == human label ÷ labeled cases | plus kappa vs the label |
 | disagreement (per case) | 1 − share of the overall majority across every judge and run | ranks the flakiest cases |
+| gate false alarm | share of 20,000 re-samples of the aggregate score that fall below the pass mark | each case re-sampled from its observed verdicts; majority of `--runs-in-ci` |
+| rubric sensitivity | cases whose majority verdict differs across wordings ÷ cases | plus alpha with wordings as raters |
+| inversion rate | cases where the reversed rubric gave the opposite verdict ÷ cases | boolean rubrics |
+| migration shift | mean score under the new judge − mean under the old | pass mark moves by the shift; per-case cutoffs map by quantile |
 
 Readings use the Landis and Koch bands for kappa and alpha: slight, fair, moderate, substantial, almost perfect. They are labels for humans, not thresholds for machines. Set your own gates.
 
@@ -208,12 +358,19 @@ Other people have looked at this problem, and some of their tools go deeper than
 
 | | judgeflake | judgecheck | judgebench | Assay rejudge | LangSmith repetitions |
 |---|---|---|---|---|---|
-| calls the judge for you, N times | yes | no, you bring ratings | 2 runs, A/B swap | yes | yes |
+| calls the judge for you, N times | yes, adaptive | no, you bring ratings | 2 runs, A/B swap | yes | yes |
 | self-agreement and flipped cases | yes | from your file | no | yes | mean and std dev only |
 | agreement between judges (kappa, alpha) | yes | yes, with confidence intervals | judge vs human | vs saved verdicts | no |
 | position and verbosity bias probes | no | yes | yes | no | no |
+| rubric sensitivity and reversal | yes | no | no | no | no |
+| gate false-alarm rate | yes | no | no | no | no |
+| judge migration with threshold translation | yes | no | no | partly | no |
+| sentinel on anchor cases | yes | no | no | no | no |
+| parser audit | yes | no | no | partly | no |
+| stabilized evaluator (k-vote, same signature) | yes | no | no | no | no |
+| escalation list for humans | yes | no | no | no | annotation queues exist |
 | drift between saved runs | yes | no | no | no | UI compare |
-| CI gate on judge reliability | yes | no | no | yes | no |
+| CI gate, GitHub Action with PR comment | yes | no | no | yes | no |
 | takes your existing evaluator function | yes | no | no | yes | its own |
 | try with no key | 10 s demo | ~30 s | no | no | no |
 
@@ -221,7 +378,8 @@ The full table, with what each of them does better, is in [docs/COMPARISON.md](d
 
 ## Roadmap
 
-- Position-bias swap test for pairwise judges
+- Position-bias swap test and transitivity check for pairwise judges
+- Confidence intervals on kappa and alpha
 - Cost per run per provider
 - Pull a LangSmith dataset directly instead of exporting JSONL
 - `judgeflake serve` to browse reports on localhost

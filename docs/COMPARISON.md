@@ -55,21 +55,21 @@ Position-bias swap test, confidence intervals on kappa and alpha, ordinal alpha,
 
 Checked 2026-10-25 against the same READMEs plus judge-drift-sentinel, haizelabs verdict and truescore.
 
-| idea | exists anywhere? | closest |
+| idea | status | closest elsewhere |
 |---|---|---|
-| 1. Rubric sensitivity: paraphrase the rubric three ways, count verdicts that change | no | papers only; Assay rewords the request, not the rubric |
-| 2. Gate false-alarm calculator: how often CI goes red on no change | no | judgecheck plans run counts (Spearman-Brown) |
-| 3. Judge migration report with threshold translation | no | judge-drift-sentinel says judge vs system moved; Assay rejudge with a new judge |
-| 4. Silent-upgrade sentinel on an anchor set | **yes**, judge-drift-sentinel | borrow the design, credit it |
-| 5. Parser audit: raw text next to parsed verdict | no | Assay counts "no verdict" apart from flips |
-| 6. Adaptive re-ask: extra runs only where runs disagreed | no | verdict repeats a fixed k |
-| 7. Escalation list of flaky cases to a human queue | no | LangSmith has annotation queues, nothing fills them by reliability |
-| 8. Stabilized evaluator: wrap into a k-sample majority vote, same signature | partly | haizelabs verdict builds voting judges as a framework |
-| 9. Rubric reversal check: flip the criterion, confirm verdicts invert | no | EMNLP 2026 paper only |
-| 10. GitHub Action with the card as a PR comment | partly | Assay and promptfoo-action post eval results, not judge reliability |
+| 1. Rubric sensitivity: paraphrase the rubric three ways, count verdicts that change | **built in 0.2.0** (`rubric-check`) | papers only; Assay rewords the request, not the rubric |
+| 2. Gate false-alarm calculator: how often CI goes red on no change | **built in 0.2.0** (`--pass-mark`, `gate-risk`) | judgecheck plans run counts (Spearman-Brown) |
+| 3. Judge migration report with threshold translation | **built in 0.2.0** (`migrate`) | judge-drift-sentinel says judge vs system moved; Assay rejudge with a new judge |
+| 4. Silent-upgrade sentinel on an anchor set | **built in 0.2.0** (`sentinel`), design credited to judge-drift-sentinel | borrow the design, credit it |
+| 5. Parser audit: raw text next to parsed verdict | **built in 0.2.0** (on the card) | Assay counts "no verdict" apart from flips |
+| 6. Adaptive re-ask: extra runs only where runs disagreed | **built in 0.2.0** (`--adaptive`) | verdict repeats a fixed k |
+| 7. Escalation list of flaky cases to a human queue | **built in 0.2.0** (`escalate`, `--langsmith-dataset`) | LangSmith has annotation queues, nothing fills them by reliability |
+| 8. Stabilized evaluator: wrap into a k-sample majority vote, same signature | **built in 0.2.0** (`--stabilize`, `judgeflake.stabilize`) | haizelabs verdict builds voting judges as a framework |
+| 9. Rubric reversal check: flip the criterion, confirm verdicts invert | **built in 0.2.0** (`rubric-check`) | EMNLP 2026 paper only |
+| 10. GitHub Action with the card as a PR comment | **built in 0.2.0** (`action.yml`, `--markdown`) | Assay and promptfoo-action post eval results, not judge reliability |
 | 11. Transitivity check for pairwise judges | no | TrustJudge paper only |
 
-Seven of eleven exist nowhere as a tool.
+Ten of eleven are now in judgeflake 0.2.0. The eleventh (transitivity) waits for a pairwise mode.
 
 ## Other close projects
 

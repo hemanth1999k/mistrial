@@ -1,0 +1,114 @@
+name: judgeflake
+description: Is your LLM judge flaky? Run the reliability card in CI and post it on the pull request.
+author: Hemanth Dhanasekaran
+branding:
+  icon: activity
+  color: orange
+
+inputs:
+  cases:
+    description: Path to the cases file (.jsonl, .json or .csv).
+    required: true
+  judges:
+    description: Space-separated judge specs, e.g. "openai:gpt-5-mini my_evals:correctness".
+    required: true
+  runs:
+    description: How many times to ask each judge about each case.
+    default: "3"
+  rubric:
+    description: Built-in rubric name or a prompt file.
+    default: correctness
+  adaptive:
+    description: Re-ask only where the first two runs disagreed ("true" or "false").
+    default: "false"
+  min-self-agreement:
+    description: Fail when the chance two runs of a judge agree is below this (0.95 = 95%). Leave empty to skip.
+    default: ""
+  max-flip-rate:
+    description: Fail when any judge flipped on more than this share of cases. Leave empty to skip.
+    default: ""
+  min-agreement:
+    description: Fail when Krippendorff's alpha between judges is below this. Leave empty to skip.
+    default: ""
+  pass-mark:
+    description: Your eval's pass mark, to report the gate false-alarm rate. Leave empty to skip.
+    default: ""
+  comment:
+    description: Post the card as a comment on the pull request ("true" or "false").
+    default: "true"
+  version:
+    description: judgeflake version to install (a PyPI version spec, or "." for the checked-out repo).
+    default: ""
+  github-token:
+    description: Token used to post the comment.
+    default: ${{ github.token }}
+
+outputs:
+  exit-code:
+    description: 0 when every gate passed, 1 when one failed.
+    value: ${{ steps.run.outputs.exit-code }}
+  markdown:
+    description: Path to the markdown card.
+    value: ${{ steps.run.outputs.markdown }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install judgeflake
+      shell: bash
+      run: |
+        if [ "${{ inputs.version }}" = "." ]; then
+          python -m pip install -q -e .
+        elif [ -n "${{ inputs.version }}" ]; then
+          python -m pip install -q "judgeflake${{ inputs.version }}"
+        else
+          python -m pip install -q judgeflake
+        fi
+
+    - name: Run the reliability card
+      id: run
+      shell: bash
+      run: |
+        set +e
+        args=()
+        for j in ${{ inputs.judges }}; do args+=(--judge "$j"); done
+        [ -n "${{ inputs.min-self-agreement }}" ] && args+=(--min-self-agreement "${{ inputs.min-self-agreement }}")
+        [ -n "${{ inputs.max-flip-rate }}" ] && args+=(--max-flip-rate "${{ inputs.max-flip-rate }}")
+        [ -n "${{ inputs.min-agreement }}" ] && args+=(--min-agreement "${{ inputs.min-agreement }}")
+        [ -n "${{ inputs.pass-mark }}" ] && args+=(--pass-mark "${{ inputs.pass-mark }}")
+        [ "${{ inputs.adaptive }}" = "true" ] && args+=(--adaptive)
+        mkdir -p .judgeflake
+        judgeflake run "${{ inputs.cases }}" "${args[@]}" --runs "${{ inputs.runs }}" --rubric "${{ inputs.rubric }}" \
+          --html .judgeflake/report.html --markdown .judgeflake/comment.md --title "judgeflake · ${{ github.repository }}"
+        code=$?
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+        echo "markdown=.judgeflake/comment.md" >> "$GITHUB_OUTPUT"
+        cat .judgeflake/comment.md >> "$GITHUB_STEP_SUMMARY"
+        exit 0
+
+    - name: Comment on the pull request
+      if: inputs.comment == 'true' && github.event_name == 'pull_request'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: |
+        pr=${{ github.event.pull_request.number }}
+        repo=${{ github.repository }}
+        body=$(cat .judgeflake/comment.md)
+        existing=$(gh api "repos/$repo/issues/$pr/comments" --paginate --jq '.[] | select(.body | startswith("<!-- judgeflake -->")) | .id' | head -1)
+        if [ -n "$existing" ]; then
+          gh api -X PATCH "repos/$repo/issues/comments/$existing" -f body="$body" > /dev/null
+        else
+          gh api "repos/$repo/issues/$pr/comments" -f body="$body" > /dev/null
+        fi
+
+    - name: Upload the HTML report
+      uses: actions/upload-artifact@v4
+      with:
+        name: judgeflake-report
+        path: .judgeflake/report.html
+        if-no-files-found: ignore
+
+    - name: Fail if a gate failed
+      shell: bash
+      run: exit ${{ steps.run.outputs.exit-code }}
