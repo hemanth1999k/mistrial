@@ -39,6 +39,10 @@ No invented scores and no letter grades. The card shows numbers and a one-line r
 - Add a line under `[Unreleased]` in `CHANGELOG.md`.
 - Keep the PR description short: what changed and why.
 
+## The demo GIF
+
+`docs/demo.gif` is rendered from `docs/demo.tape` with [VHS](https://github.com/charmbracelet/vhs): `brew install vhs && vhs docs/demo.tape`. Re-render it when the card's layout changes.
+
 ## Releasing (maintainers)
 
 1. Bump `version` in `pyproject.toml`, move `[Unreleased]` entries under the new version in `CHANGELOG.md`.

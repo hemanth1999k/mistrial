@@ -9,3 +9,4 @@ build/
 report.html
 report.json
 .DS_Store
+docs/*.mp4

@@ -31,6 +31,8 @@ pip install judgeflake && judgeflake demo
 
 Three fake judges, twenty bundled cases, five runs each:
 
+<p align="center"><img src="https://raw.githubusercontent.com/hemanth1999k/judgeflake/main/docs/demo.gif" alt="judgeflake terminal demo: the reliability card, the stabilized judge, rubric-check and migrate" width="900"></p>
+
 ```
 judgeflake · 20 cases · 3 judges · 5 runs each · 300 verdicts in 0.03s
 
