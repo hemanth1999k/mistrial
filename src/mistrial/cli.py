@@ -60,6 +60,38 @@ def _html_path(value: str | None) -> Optional[Path]:
     return Path(value)
 
 
+def _run_path(out_dir: Path, prefix: str = "") -> Path:
+    """A fresh file under <out_dir>/runs/. Stamps are per second, so two runs in the same
+    second get -2, -3, ... instead of silently overwriting each other."""
+    stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+    runs = out_dir / "runs"
+    path = runs / f"{prefix}{stamp}.json"
+    n = 2
+    while path.exists():
+        path = runs / f"{prefix}{stamp}-{n}.json"
+        n += 1
+    return path
+
+
+def _load_run(path: Path, what: str = "a saved run") -> dict:
+    """Read a file written by `mistrial run` (or `sentinel check`) and fail cleanly on anything else."""
+    try:
+        data = json.loads(path.read_text())
+    except FileNotFoundError:
+        err.print(f"[red]no such file: {path}[/red]")
+        raise typer.Exit(2)
+    except (OSError, ValueError) as e:
+        err.print(f"[red]could not read {path}: {e}[/red]")
+        raise typer.Exit(2)
+    if isinstance(data, dict) and "run" in data and "report" in data:
+        return data
+    if isinstance(data, dict) and "variants" in data:
+        err.print(f"[red]{path} is a rubric-check result, not {what}. Point at a file written by `mistrial run` (.mistrial/runs/<stamp>.json).[/red]")
+    else:
+        err.print(f"[red]{path} is not {what} written by `mistrial run` (expected JSON with 'run' and 'report').[/red]")
+    raise typer.Exit(2)
+
+
 def _build_judges(judge_specs: list[str], rubric: str, temperature, reasoning_effort, max_tokens: int, stabilize: int = 0) -> list:
     try:
         judges = [build_judge(s, rubric=rubric, temperature=temperature, reasoning_effort=reasoning_effort, max_tokens=max_tokens) for s in judge_specs]
@@ -148,8 +180,7 @@ def _run_and_report(
         print_report(report, console)
     failed = _gate_failures(report, max_flip_rate, min_self_agreement, min_agreement)
 
-    stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
-    saved = out_dir / "runs" / f"{stamp}.json"
+    saved = _run_path(out_dir)
     write_outputs(report, result, html_path=html, json_path=saved, title=title, markdown_path=markdown, gate_failures=failed)
     if json_out and json_out != saved:
         write_outputs(report, result, html_path=None, json_path=json_out, title=title)
@@ -223,8 +254,8 @@ def compare_cmd(
     json_out: Optional[Path] = typer.Option(None, "--json"),
 ) -> None:
     """Drift: which cases did each judge change its mind on between two runs?"""
-    o = json.loads(old.read_text())["report"]
-    n = json.loads(new.read_text())["report"]
+    o = _load_run(old, "the older run")["report"]
+    n = _load_run(new, "the newer run")["report"]
     cmp = compare(o, n)
     print_compare(cmp, console)
     if json_out:
@@ -234,20 +265,21 @@ def compare_cmd(
 @app.command("report")
 def report_cmd(
     run_file: Path = typer.Argument(..., help="A saved run (.mistrial/runs/<stamp>.json)."),
-    html: Optional[Path] = typer.Option(Path("report.html"), "--html"),
+    html: str = typer.Option("report.html", "--html", help="Write the HTML report here (pass 'none' to skip)."),
     markdown: Optional[Path] = typer.Option(None, "--markdown"),
     pass_mark: Optional[float] = typer.Option(None, "--pass-mark", help="Add the gate false-alarm section at this pass mark."),
     runs_in_ci: int = typer.Option(1, "--runs-in-ci", min=1),
     top: int = typer.Option(10, "--top"),
 ) -> None:
     """Re-render the card from a saved run (no API calls)."""
-    data = json.loads(run_file.read_text())
+    data = _load_run(run_file)
     result = RunResult.from_dict(data["run"])
     report = analyze(result, top=top, pass_mark=pass_mark, runs_in_ci=runs_in_ci)
     print_report(report, console)
-    write_outputs(report, result, html_path=html, json_path=None, markdown_path=markdown)
-    if html:
-        console.print(f"report → {html}")
+    html_path = _html_path(html)
+    write_outputs(report, result, html_path=html_path, json_path=None, markdown_path=markdown)
+    if html_path:
+        console.print(f"report → {html_path}")
     if markdown:
         console.print(f"markdown → {markdown}")
 
@@ -260,7 +292,7 @@ def gate_risk_cmd(
     max_false_alarm: Optional[float] = typer.Option(None, "--max-false-alarm", help="Exit 1 if any judge's gate would go red more often than this with nothing changed (0.05 = 5%)."),
 ) -> None:
     """How often would your CI gate go red with nothing changed? And what fixes it."""
-    data = json.loads(run_file.read_text())
+    data = _load_run(run_file)
     result = RunResult.from_dict(data["run"])
     report = analyze(result, top=0, pass_mark=pass_mark, runs_in_ci=runs_in_ci)
     report["flaky_cases"] = []
@@ -303,8 +335,7 @@ def rubric_check_cmd(
         raise typer.Exit(2)
     if not quiet:
         print_rubric_check(out, console)
-    stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
-    saved = out_dir / "runs" / f"rubric-check-{stamp}.json"
+    saved = _run_path(out_dir, "rubric-check-")
     saved.parent.mkdir(parents=True, exist_ok=True)
     saved.write_text(json.dumps(out, indent=2, default=str))
     if json_out:
@@ -334,8 +365,8 @@ def migrate_cmd(
     json_out: Optional[Path] = typer.Option(None, "--json"),
 ) -> None:
     """Switching judge models? See what moved and what your pass mark becomes on the new judge."""
-    old = json.loads(old_run.read_text())
-    new = json.loads(new_run.read_text()) if new_run else None
+    old = _load_run(old_run, "the run with the old judge")
+    new = _load_run(new_run, "the run with the new judge") if new_run else None
     try:
         out = migrate(old, new, old_judge, new_judge, pass_mark, threshold)
     except ValueError as e:
@@ -356,7 +387,7 @@ def sentinel_baseline_cmd(
     out: Path = typer.Option(Path(".mistrial/baseline.json"), "--out"),
 ) -> None:
     """Freeze a run as the baseline the sentinel compares against."""
-    data = json.loads(run_file.read_text())
+    data = _load_run(run_file, "a run on your anchor cases")
     base = sentinel_baseline(data)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(base, indent=2, default=str))
@@ -381,7 +412,11 @@ def sentinel_check_cmd(
     quiet: bool = typer.Option(False, "--quiet", "-q"),
 ) -> None:
     """Re-judge the anchors fresh and compare to the baseline. Exit 0 STABLE, 2 JUDGE_DRIFT, 3 anchors changed."""
-    base = json.loads(baseline.read_text())
+    try:
+        base = json.loads(baseline.read_text())
+    except FileNotFoundError:
+        err.print(f"[red]no baseline at {baseline}. Freeze one first: mistrial sentinel baseline <run>.json[/red]")
+        raise typer.Exit(2)
     cs = load_cases(cases)
     judges = _build_judges(judge, rubric, temperature, reasoning_effort, max_tokens)
     cache = Cache(out_dir / "cache.sqlite", enabled=False)  # always fresh: the point is to see today's judge
@@ -392,8 +427,7 @@ def sentinel_check_cmd(
     out = sentinel_check(base, report, cs, max_changed=max_changed, max_kappa_drop=max_kappa_drop)
     if not quiet:
         print_sentinel(out, console)
-    stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
-    saved = out_dir / "runs" / f"sentinel-{stamp}.json"
+    saved = _run_path(out_dir, "sentinel-")
     write_outputs(report, result, html_path=None, json_path=saved)
     if json_out:
         json_out.write_text(json.dumps(out, indent=2, default=str))
@@ -409,7 +443,7 @@ def escalate_cmd(
     langsmith_dataset: Optional[str] = typer.Option(None, "--langsmith-dataset", help="Also push the cases to this LangSmith dataset (needs `pip install langsmith` and LANGSMITH_API_KEY)."),
 ) -> None:
     """The cases a human should look at: judges disagreed, flipped, or missed the label."""
-    data = json.loads(run_file.read_text())
+    data = _load_run(run_file)
     report = data["report"]
     rows = escalation(report, min_disagreement=min_disagreement, include_misses=misses)
     names = [j["name"] for j in report["judges"]]
