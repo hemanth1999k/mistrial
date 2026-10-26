@@ -44,9 +44,62 @@ def test_compare_and_report_commands(tmp_path, monkeypatch):
     assert c.exit_code == 0 and "demo-flaky" in c.output
     rep = runner.invoke(app, ["report", str(tmp_path / "a.json"), "--html", str(tmp_path / "again.html")])
     assert rep.exit_code == 0 and (tmp_path / "again.html").exists()
+    monkeypatch.chdir(tmp_path)
+    skip = runner.invoke(app, ["report", str(tmp_path / "a.json"), "--html", "none", "--markdown", str(tmp_path / "a.md")])
+    assert skip.exit_code == 0 and (tmp_path / "a.md").exists()
+    assert not (tmp_path / "none").exists(), "report --html none must skip the HTML, not write a file called none"
 
 
 def test_rubrics_and_bad_judge():
     assert "correctness" in runner.invoke(app, ["rubrics"]).output
     r = runner.invoke(app, ["run", "nope.jsonl", "-j", "whatever:nomodule"])
     assert r.exit_code != 0
+
+
+def test_version_matches_pyproject():
+    import re, pathlib
+    import mistrial
+    pyproject = pathlib.Path(__file__).resolve().parents[1] / "pyproject.toml"
+    declared = re.search(r'^version = "([^"]+)"', pyproject.read_text(), re.M).group(1)
+    assert mistrial.__version__ == declared
+    out = runner.invoke(app, ["--version"])
+    assert out.exit_code == 0 and declared in out.output
+
+
+def test_same_second_runs_do_not_overwrite(tmp_path, monkeypatch):
+    from mistrial import cli
+
+    class Frozen(cli.dt.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 10, 26, 4, 23, 19)
+
+    monkeypatch.setattr(cli.dt, "datetime", Frozen)
+    out = tmp_path / ".mt"
+    paths = []
+    for _ in range(3):
+        p = cli._run_path(out)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("{}")
+        paths.append(p.name)
+    assert paths == ["20261026-042319.json", "20261026-042319-2.json", "20261026-042319-3.json"]
+    assert cli._run_path(out, "sentinel-").name == "sentinel-20261026-042319.json"
+
+
+def test_probes_reject_wrong_file_kind(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    cases = tmp_path / "c.jsonl"
+    cases.write_text(json.dumps({"id": "a", "inputs": "2+2", "outputs": "4", "reference_outputs": "4", "label": True}) + "\n")
+    out = tmp_path / ".mt"
+    rc = runner.invoke(app, ["rubric-check", str(cases), "-j", "demo:flaky", "-q", "--out-dir", str(out)])
+    assert rc.exit_code == 0
+    rubric_file = next((out / "runs").glob("rubric-check-*.json"))
+    for args in (["migrate", str(rubric_file), "--pass-mark", "0.5"], ["gate-risk", str(rubric_file), "--pass-mark", "0.5"],
+                 ["escalate", str(rubric_file), "--out", str(tmp_path / "h.csv")], ["report", str(rubric_file), "--html", "none"],
+                 ["sentinel", "baseline", str(rubric_file), "--out", str(tmp_path / "b.json")]):
+        r = runner.invoke(app, args)
+        assert r.exit_code == 2, args
+        assert "rubric-check result" in (r.output + str(r.exception or "")), args
+        assert "Traceback" not in r.output, args
+    missing = runner.invoke(app, ["report", str(tmp_path / "nope.json"), "--html", "none"])
+    assert missing.exit_code == 2 and "no such file" in missing.output

@@ -4,6 +4,12 @@ All notable changes to mistrial are recorded here. The format follows [Keep a Ch
 
 ## [Unreleased]
 
+### Fixed
+- `mistrial report --html none` wrote the HTML to a file literally named `none`. It now skips the HTML like `run` and `demo` do.
+- Two runs in the same second overwrote each other's saved JSON under `.mistrial/runs/`. Same-second runs now get `-2`, `-3`, ... suffixes.
+- Pointing `migrate`, `gate-risk`, `escalate`, `report`, `compare` or `sentinel baseline` at the wrong kind of file (a rubric-check result, a missing path) crashed with a traceback. They now say what the file is and exit 2. `sentinel check` without a baseline does the same.
+- `mistrial --version` was hardcoded and had fallen behind `pyproject.toml` (it said 0.2.0 on 0.2.1). It now reads the installed package metadata, and a test keeps the two in step.
+
 ### Added
 - `examples/hard.jsonl`: 64 cases that pit precision against reasonableness (rounding, units, hedges, extra facts, equivalent code, multi-step answers with a wrong step). Built because gpt-5.5 and the gpt-6 judges never flip on the tricky set; on this one every one of them does. README has the six-judge run.
 
