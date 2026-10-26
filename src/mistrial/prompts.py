@@ -36,7 +36,7 @@ RUBRICS: dict[str, dict[str, str]] = {
 }
 
 
-# Rewordings of each built-in rubric that mean the same thing. `judgeflake rubric-check` runs
+# Rewordings of each built-in rubric that mean the same thing. `mistrial rubric-check` runs
 # every variant and counts the verdicts that change: if the wording moves the score, the score
 # was measuring the wording. Research puts this at a quarter of cases for many judges.
 RUBRIC_VARIANTS: dict[str, list[str]] = {

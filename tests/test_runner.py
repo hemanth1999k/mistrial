@@ -2,11 +2,11 @@ import asyncio
 
 import pytest
 
-from judgeflake.cache import Cache
-from judgeflake.cases import Case
-from judgeflake.judges import CallableJudge, DemoJudge, LLMJudge, build_judge, parse_json_verdict
-from judgeflake.report import analyze, compare, headline, to_html
-from judgeflake.runner import by_judge, run
+from mistrial.cache import Cache
+from mistrial.cases import Case
+from mistrial.judges import CallableJudge, DemoJudge, LLMJudge, build_judge, parse_json_verdict
+from mistrial.report import analyze, compare, headline, to_html
+from mistrial.runner import by_judge, run
 
 CASES = [
     Case("a", "q1", "yes", "yes", True),
@@ -104,13 +104,13 @@ def test_run_collects_every_verdict_and_errors_do_not_stop_it():
     assert report["agreement"]["pairs"][0]["cases"] == 2
     assert any("stable" in line for line in headline(report))
     html = to_html(report)
-    assert "<title>judgeflake report</title>" in html and "boom" in html
+    assert "<title>mistrial report</title>" in html and "boom" in html
 
 
 def test_round_trip_and_compare():
     flaky = DemoJudge(name="d", flakiness=0.6, seed=1)
     r1 = asyncio.run(run(CASES, [flaky], runs=3, cache=Cache(enabled=False)))
-    from judgeflake.runner import RunResult
+    from mistrial.runner import RunResult
 
     back = RunResult.from_dict(r1.to_dict())
     assert [v.value for v in back.verdicts] == [v.value for v in r1.verdicts]

@@ -1,6 +1,6 @@
 """Two plain-Python evaluators with the LangSmith / openevals signature.
 
-    judgeflake run examples/cases.jsonl --judge examples.my_evals:exact --judge examples.my_evals:contains --runs 3
+    mistrial run examples/cases.jsonl --judge examples.my_evals:exact --judge examples.my_evals:contains --runs 3
 """
 
 

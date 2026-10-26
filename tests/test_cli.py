@@ -3,7 +3,7 @@ import os
 
 from typer.testing import CliRunner
 
-from judgeflake.cli import app
+from mistrial.cli import app
 
 runner = CliRunner()
 
@@ -13,7 +13,7 @@ def test_demo_writes_html_and_run(tmp_path, monkeypatch):
     r = runner.invoke(app, ["demo", "--runs", "3", "--out-dir", str(tmp_path / ".jf")])
     assert r.exit_code == 0, r.output
     assert "Consistency" in r.output and "demo-flaky" in r.output
-    assert (tmp_path / "judgeflake-demo.html").exists()
+    assert (tmp_path / "mistrial-demo.html").exists()
     runs = list((tmp_path / ".jf" / "runs").glob("*.json"))
     assert len(runs) == 1
     data = json.loads(runs[0].read_text())

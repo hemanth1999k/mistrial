@@ -1,4 +1,4 @@
-name: judgeflake
+name: mistrial
 description: Is your LLM judge flaky? Run the reliability card in CI and post it on the pull request.
 author: Hemanth Dhanasekaran
 branding:
@@ -37,7 +37,7 @@ inputs:
     description: Post the card as a comment on the pull request ("true" or "false").
     default: "true"
   version:
-    description: judgeflake version to install (a PyPI version spec, or "." for the checked-out repo).
+    description: mistrial version to install (a PyPI version spec, or "." for the checked-out repo).
     default: ""
   github-token:
     description: Token used to post the comment.
@@ -54,15 +54,15 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Install judgeflake
+    - name: Install mistrial
       shell: bash
       run: |
         if [ "${{ inputs.version }}" = "." ]; then
           python -m pip install -q -e .
         elif [ -n "${{ inputs.version }}" ]; then
-          python -m pip install -q "judgeflake${{ inputs.version }}"
+          python -m pip install -q "mistrial${{ inputs.version }}"
         else
-          python -m pip install -q judgeflake
+          python -m pip install -q mistrial
         fi
 
     - name: Run the reliability card
@@ -80,7 +80,7 @@ runs:
         JF_MAX_FLIP: ${{ inputs.max-flip-rate }}
         JF_MIN_AGREE: ${{ inputs.min-agreement }}
         JF_PASS_MARK: ${{ inputs.pass-mark }}
-        JF_TITLE: judgeflake · ${{ github.repository }}
+        JF_TITLE: mistrial · ${{ github.repository }}
       run: |
         set +e
         args=()
@@ -90,13 +90,13 @@ runs:
         [ -n "$JF_MIN_AGREE" ] && args+=(--min-agreement "$JF_MIN_AGREE")
         [ -n "$JF_PASS_MARK" ] && args+=(--pass-mark "$JF_PASS_MARK")
         [ "$JF_ADAPTIVE" = "true" ] && args+=(--adaptive)
-        mkdir -p .judgeflake
-        judgeflake run "$JF_CASES" "${args[@]}" --runs "$JF_RUNS" --rubric "$JF_RUBRIC" \
-          --html .judgeflake/report.html --markdown .judgeflake/comment.md --title "$JF_TITLE"
+        mkdir -p .mistrial
+        mistrial run "$JF_CASES" "${args[@]}" --runs "$JF_RUNS" --rubric "$JF_RUBRIC" \
+          --html .mistrial/report.html --markdown .mistrial/comment.md --title "$JF_TITLE"
         code=$?
         echo "exit-code=$code" >> "$GITHUB_OUTPUT"
-        echo "markdown=.judgeflake/comment.md" >> "$GITHUB_OUTPUT"
-        cat .judgeflake/comment.md >> "$GITHUB_STEP_SUMMARY"
+        echo "markdown=.mistrial/comment.md" >> "$GITHUB_OUTPUT"
+        cat .mistrial/comment.md >> "$GITHUB_STEP_SUMMARY"
         exit 0
 
     - name: Comment on the pull request
@@ -109,8 +109,8 @@ runs:
       run: |
         pr="$PR_NUMBER"
         repo="$REPO"
-        body=$(cat .judgeflake/comment.md)
-        existing=$(gh api "repos/$repo/issues/$pr/comments" --paginate --jq '.[] | select(.body | startswith("<!-- judgeflake -->")) | .id' | head -1)
+        body=$(cat .mistrial/comment.md)
+        existing=$(gh api "repos/$repo/issues/$pr/comments" --paginate --jq '.[] | select(.body | startswith("<!-- mistrial -->")) | .id' | head -1)
         if [ -n "$existing" ]; then
           gh api -X PATCH "repos/$repo/issues/comments/$existing" -f body="$body" > /dev/null
         else
@@ -120,8 +120,8 @@ runs:
     - name: Upload the HTML report
       uses: actions/upload-artifact@v4
       with:
-        name: judgeflake-report
-        path: .judgeflake/report.html
+        name: mistrial-report
+        path: .mistrial/report.html
         if-no-files-found: ignore
 
     - name: Fail if a gate failed

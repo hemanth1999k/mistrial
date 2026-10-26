@@ -1,15 +1,15 @@
 # Contributing
 
-Thanks for looking. judgeflake is small on purpose, so most contributions are quick.
+Thanks for looking. mistrial is small on purpose, so most contributions are quick.
 
 ## Setup
 
 ```bash
-git clone https://github.com/hemanth1999k/judgeflake.git
-cd judgeflake
+git clone https://github.com/hemanth1999k/mistrial.git
+cd mistrial
 python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 .venv/bin/pytest -q
-.venv/bin/judgeflake demo
+.venv/bin/mistrial demo
 ```
 
 Python 3.10 or newer. No API key is needed for the tests or the demo; the OpenAI and Anthropic adapters are tested against a fake HTTP server.
@@ -17,10 +17,10 @@ Python 3.10 or newer. No API key is needed for the tests or the demo; the OpenAI
 ## What is welcome
 
 - Bug reports with the command you ran and the output you got.
-- Adapters for other providers. Follow `LLMJudge._openai` in `src/judgeflake/judges.py`: plain `httpx`, retries on 429 and 5xx, one JSON verdict out.
-- Rubrics. Add to `RUBRICS` in `src/judgeflake/prompts.py` with a one-line description.
-- Loaders for other case formats, in `src/judgeflake/cases.py`.
-- Report improvements, in `src/judgeflake/report.py`. Keep it one file with no external assets.
+- Adapters for other providers. Follow `LLMJudge._openai` in `src/mistrial/judges.py`: plain `httpx`, retries on 429 and 5xx, one JSON verdict out.
+- Rubrics. Add to `RUBRICS` in `src/mistrial/prompts.py` with a one-line description.
+- Loaders for other case formats, in `src/mistrial/cases.py`.
+- Report improvements, in `src/mistrial/report.py`. Keep it one file with no external assets.
 
 ## Rules for metrics
 
@@ -35,7 +35,7 @@ No invented scores and no letter grades. The card shows numbers and a one-line r
 ## Pull requests
 
 - One change per PR, with a test.
-- Run `pytest -q` and `judgeflake demo --runs 3 --html none` before opening it.
+- Run `pytest -q` and `mistrial demo --runs 3 --html none` before opening it.
 - Add a line under `[Unreleased]` in `CHANGELOG.md`.
 - Keep the PR description short: what changed and why.
 

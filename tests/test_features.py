@@ -9,14 +9,14 @@ import httpx
 import pytest
 from typer.testing import CliRunner
 
-from judgeflake import stats
-from judgeflake.cache import Cache
-from judgeflake.cases import Case
-from judgeflake.cli import app
-from judgeflake.judges import DemoJudge, LLMJudge, StabilizedJudge, stabilize
-from judgeflake.probes import push_to_langsmith, rubric_check, sentinel_baseline, sentinel_check
-from judgeflake.report import analyze, escalation, to_markdown
-from judgeflake.runner import run
+from mistrial import stats
+from mistrial.cache import Cache
+from mistrial.cases import Case
+from mistrial.cli import app
+from mistrial.judges import DemoJudge, LLMJudge, StabilizedJudge, stabilize
+from mistrial.probes import push_to_langsmith, rubric_check, sentinel_baseline, sentinel_check
+from mistrial.report import analyze, escalation, to_markdown
+from mistrial.runner import run
 
 runner = CliRunner()
 CASES = [Case(f"c{i}", f"q{i}", "a", "a", i % 3 != 0) for i in range(24)]
@@ -97,10 +97,10 @@ def test_stabilize_api_returns_an_evaluator_with_votes():
 
     ev = stabilize(flaky, k=3)
     out = ev(inputs="q", outputs="a", reference_outputs="a")
-    assert out["score"] is True and out["judgeflake"]["votes"] == [True, True, True] and out["judgeflake"]["k"] == 3
+    assert out["score"] is True and out["mistrial"]["votes"] == [True, True, True] and out["mistrial"]["k"] == 3
     ev2 = stabilize("demo:score", k=3)
     out2 = ev2(inputs="q", outputs="a")
-    assert isinstance(out2["score"], (int, float)) and len(out2["judgeflake"]["votes"]) == 3
+    assert isinstance(out2["score"], (int, float)) and len(out2["mistrial"]["votes"]) == 3
 
 
 # ---------------------------------------------------------------------------- adaptive --
@@ -161,7 +161,7 @@ def test_escalation_rows_and_csv_and_langsmith(tmp_path):
     assert all(r["case_id"] in ids and r["reason"] and r["inputs"] for r in rows)
     assert rows[0]["disagreement"] >= rows[-1]["disagreement"]
     assert any("disagree" in r["reason"] for r in rows) and any("label says" in r["reason"] for r in rows)
-    from judgeflake.probes import write_escalation_csv
+    from mistrial.probes import write_escalation_csv
 
     out = tmp_path / "h.csv"
     write_escalation_csv(rows, out, ["a", "b"])
@@ -187,7 +187,7 @@ def test_escalation_rows_and_csv_and_langsmith(tmp_path):
 
     fc = FakeClient()
     info = push_to_langsmith(rows, "needs-human", client=fc)
-    assert info["examples"] == len(rows) and fc.examples[3] == "ds-1" and fc.examples[2][0]["judgeflake_case_id"] == rows[0]["case_id"]
+    assert info["examples"] == len(rows) and fc.examples[3] == "ds-1" and fc.examples[2][0]["mistrial_case_id"] == rows[0]["case_id"]
 
 
 # ---------------------------------------------------------------------------- markdown --
@@ -197,7 +197,7 @@ def test_markdown_card_has_table_and_gate_lines():
     result = asyncio.run(run(CASES, [DemoJudge(name="a", flakiness=0.2, seed=3)], runs=3, cache=Cache(enabled=False)))
     rep = analyze(result, pass_mark=0.6)
     md = to_markdown(rep, "t", ["a flip rate 50% > 10%"])
-    assert md.startswith("<!-- judgeflake -->") and "🔴" in md and "| `a` |" in md and "Gate risk at pass mark 0.6" in md and "**Gate failures:**" in md
+    assert md.startswith("<!-- mistrial -->") and "🔴" in md and "| `a` |" in md and "Gate risk at pass mark 0.6" in md and "**Gate failures:**" in md
     assert "🟢" in to_markdown(rep, "t", [])
 
 
@@ -224,7 +224,7 @@ def test_rubric_check_llm_uses_each_wording(monkeypatch):
         prompts.append(body["messages"][1]["content"])
         return httpx.Response(200, json={"choices": [{"finish_reason": "stop", "message": {"content": '{"score": true}'}}]})
 
-    import judgeflake.runner as rn
+    import mistrial.runner as rn
 
     real = rn.httpx.AsyncClient
     monkeypatch.setattr(rn.httpx, "AsyncClient", lambda **kw: real(transport=httpx.MockTransport(handler)))
@@ -266,7 +266,7 @@ def test_cli_run_with_adaptive_stabilize_pass_mark_markdown(tmp_path, monkeypatc
     assert r.exit_code == 0, r.output
     assert "demo-flaky×3" in r.output and "Gate risk" in r.output and "adaptive" in r.output
     md = (tmp_path / "c.md").read_text()
-    assert "<!-- judgeflake -->" in md and "demo-flaky×3" in md
+    assert "<!-- mistrial -->" in md and "demo-flaky×3" in md
 
 
 def test_cli_gate_risk_command(tmp_path, monkeypatch):
@@ -326,7 +326,7 @@ def test_cli_sentinel_and_escalate(tmp_path, monkeypatch):
 
 
 def test_markdown_escapes_names_and_csv_neutralises_formulas(tmp_path):
-    from judgeflake.probes import write_escalation_csv
+    from mistrial.probes import write_escalation_csv
 
     result = asyncio.run(run([Case("c|1", "q", "=HYPERLINK(\"http://x\")", "a", True)], [DemoJudge(name="a|b<i>", flakiness=0.0)], runs=2, cache=Cache(enabled=False)))
     rep = analyze(result)

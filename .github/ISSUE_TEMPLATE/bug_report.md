@@ -7,7 +7,7 @@ labels: bug
 **Command you ran**
 
 ```bash
-judgeflake run ...
+mistrial run ...
 ```
 
 **What happened**
@@ -18,6 +18,6 @@ Paste the output or traceback.
 
 **Environment**
 
-- judgeflake version (`judgeflake --version`):
+- mistrial version (`mistrial --version`):
 - Python version:
 - OS:

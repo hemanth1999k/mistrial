@@ -232,7 +232,7 @@ PROVIDERS: dict[str, tuple[str, tuple[str, ...]]] = {
     "together": ("https://api.together.xyz/v1", ("TOGETHER_API_KEY",)),
     "openrouter": ("https://openrouter.ai/api/v1", ("OPENROUTER_API_KEY",)),
     "ollama": ("http://localhost:11434/v1", ()),
-    "custom": ("", ("JUDGEFLAKE_API_KEY",)),  # any OpenAI-compatible server: set JUDGEFLAKE_BASE_URL
+    "custom": ("", ("MISTRIAL_API_KEY",)),  # any OpenAI-compatible server: set MISTRIAL_BASE_URL
 }
 LLM_PROVIDERS = ("anthropic", *PROVIDERS)
 
@@ -272,9 +272,9 @@ class LLMJudge:
     def base_url(self) -> str:
         """OpenAI-compatible providers only. `<PROVIDER>_BASE_URL` overrides the default."""
         default, _ = PROVIDERS[self.provider]
-        url = os.environ.get(f"{self.provider.upper()}_BASE_URL") or (os.environ.get("JUDGEFLAKE_BASE_URL") if self.provider == "custom" else None) or default
+        url = os.environ.get(f"{self.provider.upper()}_BASE_URL") or (os.environ.get("MISTRIAL_BASE_URL") if self.provider == "custom" else None) or default
         if not url:
-            raise RuntimeError(f"{self.name}: set JUDGEFLAKE_BASE_URL to your OpenAI-compatible server, e.g. http://localhost:8000/v1")
+            raise RuntimeError(f"{self.name}: set MISTRIAL_BASE_URL to your OpenAI-compatible server, e.g. http://localhost:8000/v1")
         return url.rstrip("/")
 
     def describe(self) -> dict:
@@ -440,7 +440,7 @@ class StabilizedJudge:
     """Ask an inner judge k times and return the majority (or median for numbers).
 
     This is the fix for a flaky judge, as a judge: the same signature, k times the cost, and a
-    verdict that flips far less often. Run it through judgeflake like any other judge to measure
+    verdict that flips far less often. Run it through mistrial like any other judge to measure
     exactly how much less.
     """
 
@@ -480,7 +480,7 @@ def stabilize(judge: Any, k: int = 5, *, name: str | None = None, cache: Cache |
 
     `judge` is a spec string ("openai:gpt-5-mini", "my_evals:fn"), a Judge, or a plain function
     with the evaluator signature. Returns a function fn(inputs=, outputs=, reference_outputs=)
-    that returns {"key", "score", "comment", "judgeflake": {"votes", "agreement"}}. Plug it into
+    that returns {"key", "score", "comment", "mistrial": {"votes", "agreement"}}. Plug it into
     LangSmith or openevals in place of the flaky one.
     """
     if isinstance(judge, str):
@@ -502,7 +502,7 @@ def stabilize(judge: Any, k: int = 5, *, name: str | None = None, cache: Cache |
             "key": sj.name,
             "score": raw["score"],
             "comment": resp.rationale,
-            "judgeflake": {"votes": raw["votes"], "agreement": raw["agreement"], "k": k},
+            "mistrial": {"votes": raw["votes"], "agreement": raw["agreement"], "k": k},
         }
 
     evaluator.__name__ = sj.name

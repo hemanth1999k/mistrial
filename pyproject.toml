@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "judgeflake"
+name = "mistrial"
 version = "0.2.0"
 description = "Is your LLM judge flaky? Re-run any evaluator across runs and judge models and get a reliability card: flip rate, agreement, drift, and the cases that flip."
 readme = "README.md"
@@ -32,15 +32,15 @@ dependencies = [
 dev = ["pytest>=8", "pytest-asyncio>=0.23"]
 
 [project.scripts]
-judgeflake = "judgeflake.cli:app"
+mistrial = "mistrial.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/hemanth1999k/judgeflake"
-Issues = "https://github.com/hemanth1999k/judgeflake/issues"
-Changelog = "https://github.com/hemanth1999k/judgeflake/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/hemanth1999k/mistrial"
+Issues = "https://github.com/hemanth1999k/mistrial/issues"
+Changelog = "https://github.com/hemanth1999k/mistrial/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/judgeflake"]
+packages = ["src/mistrial"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

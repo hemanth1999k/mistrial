@@ -1,4 +1,4 @@
-# How judgeflake compares
+# How mistrial compares
 
 Checked 2026-10-25 against each project's README, design doc or docs page. If something here is wrong or out of date, open an issue and it gets fixed.
 
@@ -6,7 +6,7 @@ Projects: [judgecheck](https://github.com/adhammomen/judgecheck), [judgebench](h
 
 ## Feature by feature
 
-| | judgeflake | judgecheck | judgebench | judgekeeper | Assay rejudge | LangSmith / promptfoo |
+| | mistrial | judgecheck | judgebench | judgekeeper | Assay rejudge | LangSmith / promptfoo |
 |---|---|---|---|---|---|---|
 | Calls the judge for you, N times | yes | no, you bring a ratings file | 2 runs (A/B order swap) | no | yes, `--times N` | yes, `num_repetitions` / `repeat` |
 | Self-agreement of one judge across runs | yes | yes, from your file | no | no | yes ("splits with itself") | average and std dev per score only |
@@ -24,21 +24,21 @@ Projects: [judgecheck](https://github.com/adhammomen/judgecheck), [judgebench](h
 | Built-in LLM judges | 11 providers + local Ollama | none | Anthropic | none | none | LangSmith: yes |
 | Report | terminal, single-file HTML, JSON | markdown, JSON | HTML dashboard | browser page | pytest report, PR comment | hosted UI |
 | Dependencies | typer, rich, httpx | numpy, matplotlib | – | – | pytest | SaaS / node |
-| Try without an API key | `pipx run judgeflake demo`, 10 s | clone and install, ~30 s | no | yes, on existing results | no | no |
+| Try without an API key | `pipx run mistrial demo`, 10 s | clone and install, ~30 s | no | yes, on existing results | no | no |
 | On PyPI | pending | yes | no | yes | yes | n/a |
 | Activity (stars, last push) | new | 0, created 2026-10-25 | 0, dormant since 2026-02 | 0, 2026-10 | 23, active | large |
 
-## What the others have that judgeflake does not
+## What the others have that mistrial does not
 
 Being honest about this is cheaper than being corrected in a comment thread.
 
 - **judgecheck** is the serious statistics package. Alpha at every level, weighted and Fleiss kappa, ICC, Gwet's AC1, bootstrap confidence intervals, sample-size planning, five bias probes, calibration. If you need a defensible number for a paper or an audit, use it. It does not call any model; you produce the ratings and hand them over.
-- **judgebench** is the position-bias tool. It runs every pair in both orders and reports how often the verdict depends on order. judgeflake has no pairwise mode yet.
-- **judgekeeper** solves a different problem: getting human labels in the first place. It opens a page where you mark pass or fail, then measures the judge against you, and helps you rewrite the rule. judgeflake assumes you already have labels, or runs without them.
+- **judgebench** is the position-bias tool. It runs every pair in both orders and reports how often the verdict depends on order. mistrial has no pairwise mode yet.
+- **judgekeeper** solves a different problem: getting human labels in the first place. It opens a page where you mark pass or fail, then measures the judge against you, and helps you rewrite the rule. mistrial assumes you already have labels, or runs without them.
 - **Assay** does re-judging inside a full regression-testing framework with pytest, PR comments and a McNemar test. If you already run Assay, `rejudge` is right there.
 - **LangSmith** re-runs evaluators with `num_repetitions` and shows the mean and standard deviation per score in its UI. It does not compute agreement coefficients, list flipped cases, or compare judges to each other.
 
-## What judgeflake does that none of them do together
+## What mistrial does that none of them do together
 
 - One command against the evaluator you already have, with the judge called for you, repeated, across any mix of providers and plain functions.
 - Self-agreement as the headline, because flip rate grows with the number of runs and self-agreement does not.
@@ -64,12 +64,12 @@ Checked 2026-10-25 against the same READMEs plus judge-drift-sentinel, haizelabs
 | 5. Parser audit: raw text next to parsed verdict | **built in 0.2.0** (on the card) | Assay counts "no verdict" apart from flips |
 | 6. Adaptive re-ask: extra runs only where runs disagreed | **built in 0.2.0** (`--adaptive`) | verdict repeats a fixed k |
 | 7. Escalation list of flaky cases to a human queue | **built in 0.2.0** (`escalate`, `--langsmith-dataset`) | LangSmith has annotation queues, nothing fills them by reliability |
-| 8. Stabilized evaluator: wrap into a k-sample majority vote, same signature | **built in 0.2.0** (`--stabilize`, `judgeflake.stabilize`) | haizelabs verdict builds voting judges as a framework |
+| 8. Stabilized evaluator: wrap into a k-sample majority vote, same signature | **built in 0.2.0** (`--stabilize`, `mistrial.stabilize`) | haizelabs verdict builds voting judges as a framework |
 | 9. Rubric reversal check: flip the criterion, confirm verdicts invert | **built in 0.2.0** (`rubric-check`) | EMNLP 2026 paper only |
 | 10. GitHub Action with the card as a PR comment | **built in 0.2.0** (`action.yml`, `--markdown`) | Assay and promptfoo-action post eval results, not judge reliability |
 | 11. Transitivity check for pairwise judges | no | TrustJudge paper only |
 
-Ten of eleven are now in judgeflake 0.2.0. The eleventh (transitivity) waits for a pairwise mode.
+Ten of eleven are now in mistrial 0.2.0. The eleventh (transitivity) waits for a pairwise mode.
 
 ## Other close projects
 

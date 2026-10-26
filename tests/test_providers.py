@@ -6,9 +6,9 @@ import json
 import httpx
 import pytest
 
-from judgeflake.cache import Cache
-from judgeflake.cases import Case
-from judgeflake.judges import LLM_PROVIDERS, PROVIDERS, LLMJudge, build_judge
+from mistrial.cache import Cache
+from mistrial.cases import Case
+from mistrial.judges import LLM_PROVIDERS, PROVIDERS, LLMJudge, build_judge
 
 CASE = Case("c1", "What is 2+2?", "4", "4", True)
 
@@ -66,11 +66,11 @@ def test_base_url_override(monkeypatch):
 
 
 def test_custom_requires_base_url(monkeypatch):
-    monkeypatch.delenv("JUDGEFLAKE_BASE_URL", raising=False)
+    monkeypatch.delenv("MISTRIAL_BASE_URL", raising=False)
     monkeypatch.delenv("CUSTOM_BASE_URL", raising=False)
-    with pytest.raises(RuntimeError, match="JUDGEFLAKE_BASE_URL"):
+    with pytest.raises(RuntimeError, match="MISTRIAL_BASE_URL"):
         _run(LLMJudge("custom", "my-model"), _capture([]))
-    monkeypatch.setenv("JUDGEFLAKE_BASE_URL", "http://localhost:8000/v1")
+    monkeypatch.setenv("MISTRIAL_BASE_URL", "http://localhost:8000/v1")
     seen: list = []
     _run(LLMJudge("custom", "my-model"), _capture(seen))
     assert seen[0][0] == "http://localhost:8000/v1/chat/completions" and seen[0][1] is None

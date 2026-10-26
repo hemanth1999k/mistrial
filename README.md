@@ -1,40 +1,41 @@
 <p align="center">
-  <h1 align="center">judgeflake</h1>
+  <h1 align="center">mistrial</h1>
   <p align="center"><strong>Is your LLM judge flaky?</strong><br>
-  Re-run any evaluator across runs and judge models and get a reliability card.</p>
+  Re-run any evaluator across runs, judge models and rubric wordings, and get a reliability card.<br>
+  When the verdict can't be trusted, declare a mistrial.</p>
 </p>
 
 <p align="center">
-  <a href="https://pypi.org/project/judgeflake/"><img alt="PyPI" src="https://img.shields.io/pypi/v/judgeflake.svg"></a>
-  <a href="https://github.com/hemanth1999k/judgeflake/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/hemanth1999k/judgeflake/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://pypi.org/project/judgeflake/"><img alt="Python" src="https://img.shields.io/pypi/pyversions/judgeflake.svg"></a>
+  <a href="https://pypi.org/project/mistrial/"><img alt="PyPI" src="https://img.shields.io/pypi/v/mistrial.svg"></a>
+  <a href="https://github.com/hemanth1999k/mistrial/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/hemanth1999k/mistrial/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://pypi.org/project/mistrial/"><img alt="Python" src="https://img.shields.io/pypi/pyversions/mistrial.svg"></a>
   <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/hemanth1999k/judgeflake/main/docs/report.png" alt="judgeflake HTML report: three judges, their self-agreement, agreement with each other, and the flakiest cases" width="820">
+  <img src="https://raw.githubusercontent.com/hemanth1999k/mistrial/main/docs/report.png" alt="mistrial HTML report: three judges, their self-agreement, agreement with each other, and the flakiest cases" width="820">
 </p>
 
 You ship AI features based on a score from an LLM judge. Ask that judge the same question twice and it changes its verdict on a tenth of your cases. Swap the model and it changes its mind on a quarter. One eval run is one sample from a noisy process, and almost nobody measures the noise.
 
-judgeflake does. Point it at the evaluator you already use, run it a few times across one or more judge models, and get a **reliability card**: how often the judge agrees with itself, how much judges agree with each other, how they match human labels, and the exact cases that flip.
+mistrial does. Point it at the evaluator you already use, run it a few times across one or more judge models, and get a **reliability card**: how often the judge agrees with itself, how much judges agree with each other, how they match human labels, and the exact cases that flip.
 
 ## Quickstart
 
 No API key needed for the demo.
 
 ```bash
-pipx run judgeflake demo
+pipx run mistrial demo
 # or
-pip install judgeflake && judgeflake demo
+pip install mistrial && mistrial demo
 ```
 
 Three fake judges, twenty bundled cases, five runs each:
 
-<p align="center"><img src="https://raw.githubusercontent.com/hemanth1999k/judgeflake/main/docs/demo.gif" alt="judgeflake terminal demo: the reliability card, the stabilized judge, rubric-check and migrate" width="900"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/hemanth1999k/mistrial/main/docs/demo.gif" alt="mistrial terminal demo: the reliability card, the stabilized judge, rubric-check and migrate" width="900"></p>
 
 ```
-judgeflake · 20 cases · 3 judges · 5 runs each · 300 verdicts in 0.03s
+mistrial · 20 cases · 3 judges · 5 runs each · 300 verdicts in 0.03s
 
 Consistency (same judge, asked again)
 ┏━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━┓
@@ -62,7 +63,7 @@ With a real judge:
 
 ```bash
 export OPENAI_API_KEY=...        # and/or ANTHROPIC_API_KEY
-judgeflake run cases.jsonl --judge openai:gpt-5-mini --judge anthropic:claude-sonnet-5-5 --runs 5
+mistrial run cases.jsonl --judge openai:gpt-5-mini --judge anthropic:claude-sonnet-5-5 --runs 5
 ```
 
 You get the card in the terminal, a single-file `report.html` you can send to anyone, and JSON for machines.
@@ -75,7 +76,7 @@ LLM-as-a-judge is how most teams grade their AI outputs now. The score it produc
 - Raw percent agreement overstates reliability by 30 to 40 points compared with chance-corrected kappa, across 21 judges ([Reliability without Validity, 2026](https://arxiv.org/abs/2606.19544)).
 - None of the mainstream eval platforms re-run a judge and report its self-agreement. They report one score and stop.
 
-The statistics for this problem are a century old. Test-retest reliability, Cohen's kappa and Krippendorff's alpha are standard in any field that uses human raters. They just never made it into a tool you can run in ten seconds against the evaluator you already have. That is the whole point of judgeflake.
+The statistics for this problem are a century old. Test-retest reliability, Cohen's kappa and Krippendorff's alpha are standard in any field that uses human raters. They just never made it into a tool you can run in ten seconds against the evaluator you already have. That is the whole point of mistrial.
 
 **Before "how good is my model?" you need "can I trust the number that told me?"**
 
@@ -132,15 +133,15 @@ Three kinds, mixed freely with repeated `--judge`:
 | `gemini:<model>` | Google Gemini, needs `GEMINI_API_KEY` |
 | `groq:`, `mistral:`, `deepseek:`, `xai:`, `together:`, `openrouter:` | hosted OpenAI-compatible providers, each with its own `<PROVIDER>_API_KEY` |
 | `ollama:<model>` | a local Ollama model, no key |
-| `custom:<model>` | any OpenAI-compatible server: set `JUDGEFLAKE_BASE_URL` (vLLM, LM Studio, llama.cpp, a proxy) |
+| `custom:<model>` | any OpenAI-compatible server: set `MISTRIAL_BASE_URL` (vLLM, LM Studio, llama.cpp, a proxy) |
 | `module:function` | any Python function with the LangSmith / openevals signature |
 | `demo`, `demo:flaky`, `demo:steady`, `demo:lenient` | deterministic fake judges, no key |
 
-All LLM judges use the same built-in rubric and ask for a JSON verdict. `judgeflake providers` lists the providers with their env vars and base URLs; `<PROVIDER>_BASE_URL` overrides a base URL, which is how you point `ollama:` at another machine or `openai:` at a proxy.
+All LLM judges use the same built-in rubric and ask for a JSON verdict. `mistrial providers` lists the providers with their env vars and base URLs; `<PROVIDER>_BASE_URL` overrides a base URL, which is how you point `ollama:` at another machine or `openai:` at a proxy.
 
 ```bash
 # GPT vs Claude vs a local model, five runs each
-judgeflake run cases.jsonl --judge openai:gpt-5-mini --judge anthropic:claude-sonnet-5-5 --judge ollama:llama3.2 --runs 5
+mistrial run cases.jsonl --judge openai:gpt-5-mini --judge anthropic:claude-sonnet-5-5 --judge ollama:llama3.2 --runs 5
 ```
 
 ### Your own evaluator
@@ -154,7 +155,7 @@ def correctness(inputs, outputs, reference_outputs):
 ```
 
 ```bash
-judgeflake run cases.jsonl --judge my_evals:correctness --runs 5
+mistrial run cases.jsonl --judge my_evals:correctness --runs 5
 ```
 
 ### openevals and LangSmith
@@ -169,20 +170,20 @@ judge = create_llm_as_judge(prompt=CORRECTNESS_PROMPT, model="openai:gpt-5-mini"
 ```
 
 ```bash
-judgeflake run cases.jsonl --judge my_evals:judge --judge openai:gpt-5-mini --runs 5
+mistrial run cases.jsonl --judge my_evals:judge --judge openai:gpt-5-mini --runs 5
 ```
 
 Any LangSmith custom evaluator with the same signature works the same way. Export your dataset as JSONL and point at it.
 
 ### Rubrics
 
-`--rubric correctness` (boolean, needs `reference_outputs`) and `--rubric quality` (1 to 5, no reference). Or `--rubric my_prompt.txt` with `{inputs}`, `{outputs}`, `{reference_outputs}` placeholders; the model must reply with JSON `{"score": ..., "reasoning": ...}`. Run `judgeflake rubrics` to list them.
+`--rubric correctness` (boolean, needs `reference_outputs`) and `--rubric quality` (1 to 5, no reference). Or `--rubric my_prompt.txt` with `{inputs}`, `{outputs}`, `{reference_outputs}` placeholders; the model must reply with JSON `{"score": ..., "reasoning": ...}`. Run `mistrial rubrics` to list them.
 
 ### Drift
 
 ```bash
-judgeflake run cases.jsonl --judge openai:gpt-5-mini --runs 5 --fresh
-judgeflake compare .judgeflake/runs/20261025-101500.json .judgeflake/runs/20261101-093000.json
+mistrial run cases.jsonl --judge openai:gpt-5-mini --runs 5 --fresh
+mistrial compare .mistrial/runs/20261025-101500.json .mistrial/runs/20261101-093000.json
 ```
 
 Per judge: the cases whose majority verdict changed, and flip rate and accuracy before and after.
@@ -190,7 +191,7 @@ Per judge: the cases whose majority verdict changed, and flip rate and accuracy 
 ### CI gate
 
 ```bash
-judgeflake run cases.jsonl --judge openai:gpt-5-mini --runs 3 \
+mistrial run cases.jsonl --judge openai:gpt-5-mini --runs 3 \
   --min-self-agreement 0.95 --max-flip-rate 0.10 --min-agreement 0.6 --quiet
 ```
 
@@ -199,7 +200,7 @@ Exit code 1 and a one-line reason on stderr when any gate fails. Use `--min-self
 ### Re-render
 
 ```bash
-judgeflake report .judgeflake/runs/20261025-101500.json --html card.html --markdown card.md
+mistrial report .mistrial/runs/20261025-101500.json --html card.html --markdown card.md
 ```
 
 No API calls. Re-renders the card from a saved run, as HTML and as the markdown the GitHub Action posts.
@@ -211,9 +212,9 @@ Everything below works on the demo judges too, so you can try each one before sp
 ### Gate risk: will my CI gate go red on its own?
 
 ```bash
-judgeflake run cases.jsonl --judge openai:gpt-5-mini --runs 5 --pass-mark 0.8
+mistrial run cases.jsonl --judge openai:gpt-5-mini --runs 5 --pass-mark 0.8
 # or on a saved run
-judgeflake gate-risk .judgeflake/runs/20261025-101500.json --pass-mark 0.8 --runs-in-ci 1 --max-false-alarm 0.05
+mistrial gate-risk .mistrial/runs/20261025-101500.json --pass-mark 0.8 --runs-in-ci 1 --max-false-alarm 0.05
 ```
 
 ```
@@ -227,7 +228,7 @@ Each case's observed verdicts are treated as its distribution. The gate score is
 ### Rubric sensitivity and reversal: is the score measuring the wording?
 
 ```bash
-judgeflake rubric-check cases.jsonl --judge openai:gpt-5-mini --rubric correctness
+mistrial rubric-check cases.jsonl --judge openai:gpt-5-mini --rubric correctness
 ```
 
 ```
@@ -245,8 +246,8 @@ The built-in rubrics ship with three rewordings that mean the same thing and a r
 ### Migrate: my judge model is being retired
 
 ```bash
-judgeflake run cases.jsonl --judge openai:gpt-4o --judge openai:gpt-5-mini --runs 3
-judgeflake migrate .judgeflake/runs/20261025-101500.json --pass-mark 0.7
+mistrial run cases.jsonl --judge openai:gpt-4o --judge openai:gpt-5-mini --runs 3
+mistrial migrate .mistrial/runs/20261025-101500.json --pass-mark 0.7
 ```
 
 ```
@@ -261,11 +262,11 @@ Both judges on the same cases, the shift in aggregate score, your pass mark tran
 
 ```bash
 # once: freeze a baseline on a small labeled anchor set that never changes
-judgeflake run anchors.jsonl --judge openai:gpt-5-mini --runs 3
-judgeflake sentinel baseline .judgeflake/runs/20261025-101500.json
+mistrial run anchors.jsonl --judge openai:gpt-5-mini --runs 3
+mistrial sentinel baseline .mistrial/runs/20261025-101500.json
 
 # on a schedule (nightly cron, CI): re-judge fresh and compare
-judgeflake sentinel check anchors.jsonl --judge openai:gpt-5-mini
+mistrial sentinel check anchors.jsonl --judge openai:gpt-5-mini
 ```
 
 Exit 0 `STABLE`, exit 2 `JUDGE_DRIFT` (more than `--max-changed` of anchor verdicts changed, or kappa vs human fell by more than `--max-kappa-drop`), exit 3 if the anchors themselves changed. The anchors never change, so any movement is the judge, which is how you catch a vendor's quiet model update before it blocks a release. Design credit: [judge-drift-sentinel](https://pypi.org/project/judge-drift-sentinel/).
@@ -273,17 +274,17 @@ Exit 0 `STABLE`, exit 2 `JUDGE_DRIFT` (more than `--max-changed` of anchor verdi
 ### Stabilize: the fix, as a judge
 
 ```bash
-judgeflake run cases.jsonl --judge openai:gpt-5-mini --runs 5 --stabilize 5
+mistrial run cases.jsonl --judge openai:gpt-5-mini --runs 5 --stabilize 5
 ```
 
 Adds `openai:gpt-5-mini×5` next to the raw judge: the same judge asked five times with a majority vote (median for scores). The card shows both, so you see what K buys you before you pay for it. In code:
 
 ```python
-from judgeflake import stabilize
+from mistrial import stabilize
 
 judge = stabilize("openai:gpt-5-mini", k=5)               # or stabilize(my_evaluator_fn, k=5)
 judge(inputs="2+2?", outputs="4", reference_outputs="4")
-# {"key": "openai:gpt-5-mini×5", "score": True, "comment": "...", "judgeflake": {"votes": [...], "agreement": 1.0, "k": 5}}
+# {"key": "openai:gpt-5-mini×5", "score": True, "comment": "...", "mistrial": {"votes": [...], "agreement": 1.0, "k": 5}}
 ```
 
 Same signature as a LangSmith or openevals evaluator, so it drops in where the flaky one was.
@@ -291,7 +292,7 @@ Same signature as a LangSmith or openevals evaluator, so it drops in where the f
 ### Adaptive re-ask: the same numbers for a third of the calls
 
 ```bash
-judgeflake run cases.jsonl --judge openai:gpt-5-mini --runs 7 --adaptive
+mistrial run cases.jsonl --judge openai:gpt-5-mini --runs 7 --adaptive
 ```
 
 Every case gets two runs. Only cases where the two disagreed (or a call failed) get the remaining five. Self-agreement is estimated from pairs within each case, so settled cases lose nothing. The card reports the calls skipped.
@@ -299,8 +300,8 @@ Every case gets two runs. Only cases where the two disagreed (or a call failed) 
 ### Escalate: what should a human look at?
 
 ```bash
-judgeflake escalate .judgeflake/runs/20261025-101500.json --out needs-human.csv
-judgeflake escalate .judgeflake/runs/20261025-101500.json --langsmith-dataset needs-human   # pip install langsmith
+mistrial escalate .mistrial/runs/20261025-101500.json --out needs-human.csv
+mistrial escalate .mistrial/runs/20261025-101500.json --langsmith-dataset needs-human   # pip install langsmith
 ```
 
 One row per case where judges disagreed, flipped, or missed the human label, with every verdict, the case itself, and an empty `your_verdict` column for the reviewer. The LangSmith option creates or extends a dataset with the same rows so your team can annotate them there.
@@ -308,7 +309,7 @@ One row per case where judges disagreed, flipped, or missed the human label, wit
 ### GitHub Action: the card on every pull request
 
 ```yaml
-# .github/workflows/judgeflake.yml
+# .github/workflows/mistrial.yml
 on: [pull_request]
 jobs:
   judge:
@@ -318,7 +319,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - uses: hemanth1999k/judgeflake@v0.2.0
+      - uses: hemanth1999k/mistrial@v0.2.0
         with:
           cases: evals/cases.jsonl
           judges: "openai:gpt-5-mini my_evals:correctness"
@@ -330,11 +331,11 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-Posts the card as a comment on the PR (updated in place on later pushes), writes it to the job summary, uploads the HTML report as an artifact, and fails the job when a gate fails. Outside GitHub, `judgeflake run … --markdown card.md` writes the same comment for whatever posts it.
+Posts the card as a comment on the PR (updated in place on later pushes), writes it to the job summary, uploads the HTML report as an artifact, and fails the job when a gate fails. Outside GitHub, `mistrial run … --markdown card.md` writes the same comment for whatever posts it.
 
 ## How the numbers are computed
 
-Everything lives in `src/judgeflake/stats.py`, is pure Python, and is tested against the textbook examples (Krippendorff's own data for alpha, the standard two-rater example for kappa). Nothing is a "grade".
+Everything lives in `src/mistrial/stats.py`, is pure Python, and is tested against the textbook examples (Krippendorff's own data for alpha, the standard two-rater example for kappa). Nothing is a "grade".
 
 | metric | formula | notes |
 |---|---|---|
@@ -356,9 +357,9 @@ Known limits: kappa on a handful of cases is not evidence, and a judge that is p
 
 ## How is this different
 
-Other people have looked at this problem, and some of their tools go deeper than judgeflake on statistics. The short version:
+Other people have looked at this problem, and some of their tools go deeper than mistrial on statistics. The short version:
 
-| | judgeflake | judgecheck | judgebench | Assay rejudge | LangSmith repetitions |
+| | mistrial | judgecheck | judgebench | Assay rejudge | LangSmith repetitions |
 |---|---|---|---|---|---|
 | calls the judge for you, N times | yes, adaptive | no, you bring ratings | 2 runs, A/B swap | yes | yes |
 | self-agreement and flipped cases | yes | from your file | no | yes | mean and std dev only |
@@ -376,7 +377,7 @@ Other people have looked at this problem, and some of their tools go deeper than
 | takes your existing evaluator function | yes | no | no | yes | its own |
 | try with no key | 10 s demo | ~30 s | no | no | no |
 
-The full table, with what each of them does better, is in [docs/COMPARISON.md](docs/COMPARISON.md). judgecheck is the one to use when you need confidence intervals and bias probes for a paper or audit. judgeflake is the one to run against the evaluator you already have, in a minute, and put in CI.
+The full table, with what each of them does better, is in [docs/COMPARISON.md](docs/COMPARISON.md). judgecheck is the one to use when you need confidence intervals and bias probes for a paper or audit. mistrial is the one to run against the evaluator you already have, in a minute, and put in CI.
 
 ## Roadmap
 
@@ -384,7 +385,7 @@ The full table, with what each of them does better, is in [docs/COMPARISON.md](d
 - Confidence intervals on kappa and alpha
 - Cost per run per provider
 - Pull a LangSmith dataset directly instead of exporting JSONL
-- `judgeflake serve` to browse reports on localhost
+- `mistrial serve` to browse reports on localhost
 
 Open an issue if you want one of these first. See [CHANGELOG.md](CHANGELOG.md) for what has shipped.
 

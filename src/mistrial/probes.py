@@ -137,7 +137,7 @@ def _read_reversal(rate: float) -> str:
 def print_rubric_check(out: dict, console: Console | None = None) -> None:
     con = console or Console()
     con.print()
-    con.print(f"[bold]judgeflake rubric-check[/bold] · rubric {out['rubric']} · {len(out['variants'])} wordings{' + reversed' if out['reversal'] else ''} · {out['run']['runs']} run(s) each · {out['calls']} verdicts")
+    con.print(f"[bold]mistrial rubric-check[/bold] · rubric {out['rubric']} · {len(out['variants'])} wordings{' + reversed' if out['reversal'] else ''} · {out['run']['runs']} run(s) each · {out['calls']} verdicts")
     con.print()
     t = Table(title="Rubric sensitivity (same meaning, different words)", title_justify="left")
     t.add_column("judge", style="bold")
@@ -216,7 +216,7 @@ def migrate(old_run: dict, new_run: dict | None, old_judge: str | None, new_judg
 def print_migrate(out: dict, console: Console | None = None) -> None:
     con = console or Console()
     con.print()
-    con.print(f"[bold]judgeflake migrate[/bold] · {out['old_judge']} → {out['new_judge']} · {out['cases']} shared cases")
+    con.print(f"[bold]mistrial migrate[/bold] · {out['old_judge']} → {out['new_judge']} · {out['cases']} shared cases")
     t = Table(show_header=True)
     t.add_column("")
     t.add_column(out["old_judge"], justify="right")
@@ -331,7 +331,7 @@ def print_sentinel(out: dict, console: Console | None = None) -> None:
     con = console or Console()
     con.print()
     color = {"STABLE": "green", "JUDGE_DRIFT": "red", "ANCHORS_CHANGED": "yellow"}[out["verdict"]]
-    con.print(f"[bold]judgeflake sentinel[/bold] · [{color}]{out['verdict']}[/{color}]")
+    con.print(f"[bold]mistrial sentinel[/bold] · [{color}]{out['verdict']}[/{color}]")
     if not out["anchor_ok"]:
         con.print("[yellow]the anchor cases differ from the ones the baseline was frozen on; re-freeze with `sentinel baseline`[/yellow]")
     t = Table()
@@ -392,11 +392,11 @@ def push_to_langsmith(rows: list[dict], dataset_name: str, client: Any = None) -
     try:
         ds = client.read_dataset(dataset_name=dataset_name)
     except Exception:
-        ds = client.create_dataset(dataset_name=dataset_name, description="Cases judgeflake flagged for human review: judges disagreed or missed the label.")
+        ds = client.create_dataset(dataset_name=dataset_name, description="Cases mistrial flagged for human review: judges disagreed or missed the label.")
     client.create_examples(
         inputs=[{"inputs": r["inputs"]} for r in rows],
         outputs=[{"outputs": r["outputs"], "reference_outputs": r["reference_outputs"]} for r in rows],
-        metadata=[{"judgeflake_case_id": r["case_id"], "reason": r["reason"], "disagreement": r["disagreement"], "verdicts": r["verdicts"], "human_label": r["label"]} for r in rows],
+        metadata=[{"mistrial_case_id": r["case_id"], "reason": r["reason"], "disagreement": r["disagreement"], "verdicts": r["verdicts"], "human_label": r["label"]} for r in rows],
         dataset_id=ds.id,
     )
     return {"dataset": dataset_name, "id": str(ds.id), "examples": len(rows)}

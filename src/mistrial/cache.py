@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-DEFAULT_DIR = Path(".judgeflake")
+DEFAULT_DIR = Path(".mistrial")
 
 
 def key_for(*parts: Any) -> str:

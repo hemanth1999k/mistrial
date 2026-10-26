@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from judgeflake.cases import load_cases
+from mistrial.cases import load_cases
 
 
 def test_jsonl_with_aliases(tmp_path):

@@ -185,7 +185,7 @@ def print_report(report: dict, console: Console | None = None) -> None:
     con = console or Console()
     m = report["meta"]
     con.print()
-    con.print(f"[bold]judgeflake[/bold] · {m['cases']} cases · {m['judges']} judge{'s' if m['judges'] != 1 else ''} · {m['runs']} runs each · {m['calls']} verdicts in {m['duration_s']}s")
+    con.print(f"[bold]mistrial[/bold] · {m['cases']} cases · {m['judges']} judge{'s' if m['judges'] != 1 else ''} · {m['runs']} runs each · {m['calls']} verdicts in {m['duration_s']}s")
     con.print()
 
     t = Table(title="Consistency (same judge, asked again)", title_justify="left", show_lines=False)
@@ -324,7 +324,7 @@ def _chip(v: Any) -> str:
     return f'<span class="v {c}">{html.escape(s)}</span>'
 
 
-def to_html(report: dict, title: str = "judgeflake report") -> str:
+def to_html(report: dict, title: str = "mistrial report") -> str:
     m = report["meta"]
     e = html.escape
     cards = []
@@ -419,7 +419,7 @@ def to_html(report: dict, title: str = "judgeflake report") -> str:
 {gate_html}
 {flaky_html}
 {audit_html}
-<footer>Made with judgeflake. Formulas: "two runs agree" = mean over cases of the share of run pairs with equal verdicts; flip rate = cases with more than one distinct verdict across runs; Cohen's kappa and Krippendorff's alpha as standard; kappa readings use Landis &amp; Koch bands.</footer>
+<footer>Made with mistrial. Formulas: "two runs agree" = mean over cases of the share of run pairs with equal verdicts; flip rate = cases with more than one distinct verdict across runs; Cohen's kappa and Krippendorff's alpha as standard; kappa readings use Landis &amp; Koch bands.</footer>
 </main></body></html>"""
 
 
@@ -429,7 +429,7 @@ def _s(v: Any) -> str:
     return v if isinstance(v, str) else json.dumps(v, ensure_ascii=False, indent=2)
 
 
-def write_outputs(report: dict, result: RunResult, html_path: Path | None, json_path: Path | None, title: str = "judgeflake report", markdown_path: Path | None = None, gate_failures: list[str] | None = None) -> None:
+def write_outputs(report: dict, result: RunResult, html_path: Path | None, json_path: Path | None, title: str = "mistrial report", markdown_path: Path | None = None, gate_failures: list[str] | None = None) -> None:
     if json_path:
         json_path.parent.mkdir(parents=True, exist_ok=True)
         json_path.write_text(json.dumps({"report": report, "run": result.to_dict()}, indent=2, default=str))
@@ -449,7 +449,7 @@ def _md(s: Any) -> str:
     return html.escape(str(s)).replace("|", "\\|").replace("\n", " ").replace("`", "'")
 
 
-def to_markdown(report: dict, title: str = "judgeflake report", gate_failures: list[str] | None = None) -> str:
+def to_markdown(report: dict, title: str = "mistrial report", gate_failures: list[str] | None = None) -> str:
     """The card as a GitHub-flavoured markdown comment (what the GitHub Action posts on a PR).
 
     Only names, ids and numbers go in; never case inputs or model text, which may contain
@@ -460,7 +460,7 @@ def to_markdown(report: dict, title: str = "judgeflake report", gate_failures: l
     failures = [_md(f) for f in (gate_failures or [])]
     status = "🔴 gate failed" if failures else "🟢 judges within limits"
     lines = [
-        "<!-- judgeflake -->",
+        "<!-- mistrial -->",
         f"### {title} · {status}",
         "",
         f"{m['cases']} cases · {m['judges']} judge{'s' if m['judges'] != 1 else ''} · {m['runs']} runs each · {m['calls']} verdicts",
@@ -489,7 +489,7 @@ def to_markdown(report: dict, title: str = "judgeflake report", gate_failures: l
         lines += ["", "</details>"]
     if failures:
         lines += ["", "**Gate failures:** " + "; ".join(failures)]
-    lines += ["", "<sub>judgeflake · self-agreement is the chance two runs give the same verdict on a case</sub>"]
+    lines += ["", "<sub>mistrial · self-agreement is the chance two runs give the same verdict on a case</sub>"]
     return "\n".join(lines) + "\n"
 
 
@@ -583,7 +583,7 @@ def compare(old: dict, new: dict) -> dict:
 def print_compare(cmp: dict, console: Console | None = None) -> None:
     con = console or Console()
     con.print()
-    con.print(f"[bold]judgeflake compare[/bold] · {cmp['old']['created']} → {cmp['new']['created']}")
+    con.print(f"[bold]mistrial compare[/bold] · {cmp['old']['created']} → {cmp['new']['created']}")
     t = Table(show_lines=False)
     t.add_column("judge", style="bold")
     t.add_column("cases", justify="right")

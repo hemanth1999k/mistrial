@@ -21,13 +21,13 @@ jobs:
       - run: python -m pytest -q
       - name: demo smoke test
         run: |
-          judgeflake demo --runs 5 --html none --out-dir /tmp/jf --adaptive --stabilize 3 --pass-mark 0.55
-          judgeflake rubric-check examples/cases.jsonl -j demo:steady --out-dir /tmp/jf -q
+          mistrial demo --runs 5 --html none --out-dir /tmp/jf --adaptive --stabilize 3 --pass-mark 0.55
+          mistrial rubric-check examples/cases.jsonl -j demo:steady --out-dir /tmp/jf -q
           run=$(ls /tmp/jf/runs/2*.json | head -1)
-          judgeflake gate-risk "$run" --pass-mark 0.5
-          judgeflake migrate "$run" --pass-mark 0.6
-          judgeflake escalate "$run" --out /tmp/jf/needs-human.csv
-          judgeflake sentinel baseline "$run" --out /tmp/jf/base.json
-          judgeflake report "$run" --html none --markdown /tmp/jf/card.md
+          mistrial gate-risk "$run" --pass-mark 0.5
+          mistrial migrate "$run" --pass-mark 0.6
+          mistrial escalate "$run" --out /tmp/jf/needs-human.csv
+          mistrial sentinel baseline "$run" --out /tmp/jf/base.json
+          mistrial report "$run" --html none --markdown /tmp/jf/card.md
       - name: build
         run: python -m pip install -q build twine && python -m build -q && python -m twine check dist/*

@@ -1,4 +1,4 @@
-"""judgeflake: is your LLM judge flaky?"""
+"""mistrial: is your LLM judge flaky?"""
 
 from .cases import Case, load_cases
 from .judges import StabilizedJudge, Verdict, stabilize

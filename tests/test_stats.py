@@ -2,7 +2,7 @@ import math
 
 import pytest
 
-from judgeflake import stats
+from mistrial import stats
 
 
 def test_normalize_reads_langsmith_and_openevals_results():

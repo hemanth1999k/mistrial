@@ -1,4 +1,4 @@
-"""judgeflake command line."""
+"""mistrial command line."""
 
 from __future__ import annotations
 
@@ -40,12 +40,12 @@ app = typer.Typer(
 console = Console()
 err = Console(stderr=True)
 
-JUDGE_HELP = "Judge spec, repeatable: <provider>:<model> (openai, anthropic, gemini, groq, mistral, deepseek, xai, together, openrouter, ollama, custom; see `judgeflake providers`), module:function, demo[:flaky|steady|lenient|score]."
+JUDGE_HELP = "Judge spec, repeatable: <provider>:<model> (openai, anthropic, gemini, groq, mistral, deepseek, xai, together, openrouter, ollama, custom; see `mistrial providers`), module:function, demo[:flaky|steady|lenient|score]."
 
 
 def _version(value: bool) -> None:
     if value:
-        console.print(f"judgeflake {__version__}")
+        console.print(f"mistrial {__version__}")
         raise typer.Exit()
 
 
@@ -138,7 +138,7 @@ def _run_and_report(
     planned = len(cases) * len(judges) * (2 if adaptive and runs > 2 else runs)
     if not quiet:
         mode = " (adaptive: 2 runs each, more only where they disagree)" if adaptive and runs > 2 else ""
-        console.print(f"judgeflake · {len(cases)} cases × {len(judges)} judges × {runs} runs{mode}" + (" · fresh, no cache" if fresh else ""))
+        console.print(f"mistrial · {len(cases)} cases × {len(judges)} judges × {runs} runs{mode}" + (" · fresh, no cache" if fresh else ""))
     bar, tick = _progress(quiet, planned)
     with bar:
         result = asyncio.run(run(cases, judges, runs=runs, concurrency=concurrency, cache=cache, progress=tick, rubric=rubric, label=label, adaptive=adaptive))
@@ -185,7 +185,7 @@ def run_cmd(
     reasoning_effort: Optional[str] = typer.Option(None, "--reasoning-effort", help="OpenAI reasoning models only (e.g. low, medium)."),
     max_tokens: int = typer.Option(1024, "--max-tokens"),
     label: Optional[str] = typer.Option(None, "--label", help="A name for this run (shows up in compare)."),
-    title: str = typer.Option("judgeflake report", "--title"),
+    title: str = typer.Option("mistrial report", "--title"),
     quiet: bool = typer.Option(False, "--quiet", "-q"),
 ) -> None:
     """Run the judges over the cases and print the reliability card."""
@@ -199,25 +199,26 @@ def run_cmd(
 @app.command("demo")
 def demo_cmd(
     runs: int = typer.Option(5, "--runs", "-n", min=1),
-    html: str = typer.Option("judgeflake-demo.html", "--html", help="Write the HTML report here (pass 'none' to skip)."),
+    html: str = typer.Option("mistrial-demo.html", "--html", help="Write the HTML report here (pass 'none' to skip)."),
     out_dir: Path = typer.Option(DEFAULT_DIR, "--out-dir"),
     stabilize: int = typer.Option(0, "--stabilize", help="Also show each demo judge wrapped in a K-sample majority vote."),
     pass_mark: Optional[float] = typer.Option(None, "--pass-mark", help="Show the gate false-alarm section at this pass mark (try 0.8)."),
     adaptive: bool = typer.Option(False, "--adaptive"),
 ) -> None:
-    """Try judgeflake in ten seconds with three fake judges and twenty bundled cases. No API keys."""
-    with resources.as_file(resources.files("judgeflake").joinpath("data/demo_cases.jsonl")) as p:
+    """Try mistrial in ten seconds with three fake judges and twenty bundled cases. No API keys."""
+    console.print("[dim]Demo: three fake judges built to be flaky, lenient and steady on purpose, so the card has something to show. Nothing here is broken.[/dim]")
+    with resources.as_file(resources.files("mistrial").joinpath("data/demo_cases.jsonl")) as p:
         code = _run_and_report(
-            Path(p), ["demo", "demo:flaky", "demo:lenient"], runs, "correctness", 8, True, out_dir, _html_path(html), None, None, None, None, 10, None, None, 1024, "demo", False, "judgeflake demo",
+            Path(p), ["demo", "demo:flaky", "demo:lenient"], runs, "correctness", 8, True, out_dir, _html_path(html), None, None, None, None, 10, None, None, 1024, "demo", False, "mistrial demo",
             adaptive=adaptive, stabilize=stabilize, pass_mark=pass_mark,
         )
-    console.print("[dim]These are fake judges. Point `judgeflake run` at your own cases with --judge openai:<model>, --judge ollama:<model> or --judge module:function.[/dim]")
+    console.print("[dim]These are fake judges. Point `mistrial run` at your own cases with --judge openai:<model>, --judge ollama:<model> or --judge module:function.[/dim]")
     raise typer.Exit(code)
 
 
 @app.command("compare")
 def compare_cmd(
-    old: Path = typer.Argument(..., help="An earlier run (.judgeflake/runs/<stamp>.json)."),
+    old: Path = typer.Argument(..., help="An earlier run (.mistrial/runs/<stamp>.json)."),
     new: Path = typer.Argument(..., help="A later run of the same cases and judges."),
     json_out: Optional[Path] = typer.Option(None, "--json"),
 ) -> None:
@@ -232,7 +233,7 @@ def compare_cmd(
 
 @app.command("report")
 def report_cmd(
-    run_file: Path = typer.Argument(..., help="A saved run (.judgeflake/runs/<stamp>.json)."),
+    run_file: Path = typer.Argument(..., help="A saved run (.mistrial/runs/<stamp>.json)."),
     html: Optional[Path] = typer.Option(Path("report.html"), "--html"),
     markdown: Optional[Path] = typer.Option(None, "--markdown"),
     pass_mark: Optional[float] = typer.Option(None, "--pass-mark", help="Add the gate false-alarm section at this pass mark."),
@@ -352,7 +353,7 @@ app.add_typer(sentinel_app, name="sentinel")
 @sentinel_app.command("baseline")
 def sentinel_baseline_cmd(
     run_file: Path = typer.Argument(..., help="A saved run on your anchor cases (small, labeled, never changes)."),
-    out: Path = typer.Option(Path(".judgeflake/baseline.json"), "--out"),
+    out: Path = typer.Option(Path(".mistrial/baseline.json"), "--out"),
 ) -> None:
     """Freeze a run as the baseline the sentinel compares against."""
     data = json.loads(run_file.read_text())
@@ -366,7 +367,7 @@ def sentinel_baseline_cmd(
 def sentinel_check_cmd(
     cases: Path = typer.Argument(..., help="The same anchor cases the baseline was frozen on."),
     judge: list[str] = typer.Option(..., "--judge", "-j", help=JUDGE_HELP),
-    baseline: Path = typer.Option(Path(".judgeflake/baseline.json"), "--baseline"),
+    baseline: Path = typer.Option(Path(".mistrial/baseline.json"), "--baseline"),
     runs: int = typer.Option(3, "--runs", "-n", min=1),
     rubric: str = typer.Option("correctness", "--rubric", "-r"),
     max_changed: float = typer.Option(0.10, "--max-changed", help="JUDGE_DRIFT when more than this share of anchor verdicts changed."),
@@ -443,7 +444,7 @@ def providers_cmd() -> None:
     console.print("[bold]anthropic[/bold]  ANTHROPIC_API_KEY  (native messages API)")
     for name, (url, envs) in PROVIDERS.items():
         key = " or ".join(envs) if envs else "no key"
-        where = url or "set JUDGEFLAKE_BASE_URL"
+        where = url or "set MISTRIAL_BASE_URL"
         console.print(f"[bold]{name}[/bold]  {key}  {where}")
     console.print("[dim]<PROVIDER>_BASE_URL overrides a base URL. All of these use --judge <provider>:<model>.[/dim]")
 

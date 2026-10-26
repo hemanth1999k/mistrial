@@ -5,7 +5,7 @@ dist/
 build/
 *.egg-info/
 .pytest_cache/
-.judgeflake/
+.mistrial/
 report.html
 report.json
 .DS_Store

@@ -6,9 +6,9 @@ import json
 import httpx
 import pytest
 
-from judgeflake.cache import Cache
-from judgeflake.cases import Case
-from judgeflake.judges import LLMJudge
+from mistrial.cache import Cache
+from mistrial.cases import Case
+from mistrial.judges import LLMJudge
 
 CASE = Case("c1", "What is 2+2?", "4", "4", True)
 
@@ -77,7 +77,7 @@ def test_openai_retries_on_429_then_succeeds(monkeypatch):
 
     j = LLMJudge("openai", "gpt-5-mini", retries=4)
     j._client = _client(handler)
-    monkeypatch.setattr("judgeflake.judges.asyncio.sleep", _no_sleep)
+    monkeypatch.setattr("mistrial.judges.asyncio.sleep", _no_sleep)
     raw, _, _ = asyncio.run(j.judge(CASE, 0, Cache(enabled=False)))
     assert raw["score"] is True and calls["n"] == 3
 
