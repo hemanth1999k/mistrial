@@ -53,7 +53,7 @@ Position-bias swap test, confidence intervals on kappa and alpha, ordinal alpha,
 
 ## Proposed additions and who already has them
 
-Checked 2026-10-25 against the same READMEs plus judge-drift-sentinel, haizelabs verdict and truescore.
+Checked 2026-10-25 against the same READMEs plus judge-drift-sentinel, haizelabs verdict and truescore; judge-kappa, llm-judge-bench and TruLens added 2026-10-26.
 
 | idea | status | closest elsewhere |
 |---|---|---|
@@ -76,6 +76,9 @@ Ten of eleven are now in mistrial 0.2.0. The eleventh (transitivity) waits for a
 - [judgecheck by theruviparambil](https://github.com/theruviparambil/judgecheck): the `judgecheck` that is on PyPI, and a different project from the one in the table. Panel reliability from rating files: Fleiss' kappa, Krippendorff's alpha, pairwise Cohen's kappa, recall and precision per rater against adjudicated truth, how many effective independent judges a panel has (Kish design effect), coincident-error detection with a permutation p-value, rater triage (keep, review, drop), bootstrap intervals, and `--fail-under` CI gates. No model calls. Created 2026-08, last push 2026-09. If you run a multi-model panel and want to know whether the judges are really independent, use it.
 
 - [judge-drift-sentinel](https://pypi.org/project/judge-drift-sentinel/): frozen human-labeled anchor set, tells you whether the judge or the system moved, exit codes. v0.1.0, PyPI upload pending.
+- [judge-kappa](https://github.com/williamcaban/judge-kappa-eval) (williamcaban, on PyPI as `judge-kappa`): Krippendorff's alpha with 95% CI, Cohen's kappa, panel/jury judges, pairwise preference and Elo, position and verbosity bias detection. 4 stars, last push 2026-10. Builds and scores judge panels; it is the closest package in spirit to mistrial and goes further on bias and intervals. mistrial takes your existing evaluator, re-runs it, and adds the gate, migrate, sentinel and stabilize layers.
+- [llm-judge-bench](https://github.com/hankimis/llm-judge-bench) (hankimis): a benchmark run, not a tool for your evaluator: five frontier judges against ground truth, with truth accuracy, self-consistency and three bias probes. Last push 2026-05.
+- [TruLens](https://github.com/truera/trulens): a `Jury` aggregator over feedback functions and an open PR (#2868) for a repeated-trial `SelfConsistency` wrapper. 3.6k stars.
 - [verdict](https://github.com/haizelabs/verdict) (haizelabs): framework for compound judges with repeat and vote. 349 stars, last push 2025-11. Builds judges rather than measuring them.
 - [truescore](https://pypi.org/project/truescore/): bias-corrected scores and confidence intervals for LLM-judged benchmarks from a results file. Statistics after the fact.
 - [promptfoo-action](https://github.com/promptfoo/promptfoo-action): posts eval results on PRs. 77 stars.
