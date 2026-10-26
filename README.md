@@ -360,7 +360,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - uses: hemanth1999k/mistrial@v0.2.1
+      - uses: hemanth1999k/mistrial@v0.2.2
         with:
           cases: evals/cases.jsonl
           judges: "openai:gpt-5.4-mini my_evals:correctness"
