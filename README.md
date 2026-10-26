@@ -22,49 +22,54 @@ mistrial does. Point it at the evaluator you already use, run it a few times acr
 
 ## Quickstart
 
-No API key needed for the demo.
-
 ```bash
-pipx run mistrial demo
-# or
-pip install mistrial && mistrial demo
+pip install mistrial
+export OPENAI_API_KEY=...        # or ANTHROPIC_API_KEY, GEMINI_API_KEY, GROQ_API_KEY, ... see `mistrial providers`
+mistrial run cases.jsonl -j openai:gpt-4o-mini -j openai:gpt-5-mini -j openai:gpt-4.1-mini --runs 5
 ```
 
-Three fake judges, twenty bundled cases, five runs each:
+No key? `pipx run mistrial demo` runs three fake judges that are built to be flaky on purpose.
 
-<p align="center"><img src="https://raw.githubusercontent.com/hemanth1999k/mistrial/main/docs/demo.gif" alt="mistrial terminal demo: the reliability card, the stabilized judge, rubric-check and migrate" width="900"></p>
+Here is the real thing: three OpenAI judges on the twenty bundled cases, five runs each, 300 live calls.
+
+<p align="center"><img src="https://raw.githubusercontent.com/hemanth1999k/mistrial/main/docs/demo.gif" alt="mistrial terminal demo with real OpenAI judges: the reliability card, rubric-check and migrate" width="900"></p>
 
 ```
-mistrial · 20 cases · 3 judges · 5 runs each · 300 verdicts in 0.03s
+mistrial · 20 cases · 3 judges · 5 runs each · 300 verdicts in 50.68s
 
 Consistency (same judge, asked again)
-┏━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━┓
-┃ judge        ┃ self-agreement ┃ flipped cases ┃      vs human ┃ errors ┃ reading    ┃
-┡━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━┩
-│ demo         │            85% │    7/20 (35%) │ 100% (κ 1.00) │      0 │ flaky      │
-│ demo-flaky   │            58% │   16/20 (80%) │  80% (κ 0.60) │      0 │ very flaky │
-│ demo-lenient │            98% │     1/20 (5%) │  80% (κ 0.55) │      0 │ stable     │
-└──────────────┴────────────────┴───────────────┴───────────────┴────────┴────────────┘
+┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━┓
+┃ judge               ┃ self-agreement ┃ flipped cases ┃      vs human ┃ errors ┃ reading ┃
+┡━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━┩
+│ openai:gpt-4o-mini  │            98% │     1/20 (5%) │  80% (κ 0.62) │      0 │ stable  │
+│ openai:gpt-5-mini   │           100% │     0/20 (0%) │ 100% (κ 1.00) │      0 │ stable  │
+│ openai:gpt-4.1-mini │           100% │     0/20 (0%) │  95% (κ 0.90) │      0 │ stable  │
+└─────────────────────┴────────────────┴───────────────┴───────────────┴────────┴─────────┘
 
 Agreement (different judges)
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━━━━━━━┓
-┃ pair                       ┃ cases ┃ agree ┃ kappa ┃ reading     ┃
-┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━━━━━━━┩
-│ demo vs demo-flaky         │    20 │   80% │  0.60 │ substantial │
-│ demo vs demo-lenient       │    20 │   80% │  0.55 │ moderate    │
-│ demo-flaky vs demo-lenient │    20 │   60% │  0.20 │ slight      │
-└────────────────────────────┴───────┴───────┴───────┴─────────────┘
-Krippendorff's alpha: 0.44 on majority verdicts, 0.32 counting every run (nominal)
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━━━━━━━━━━┓
+┃ pair                                      ┃ cases ┃ agree ┃ kappa ┃ reading        ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━━━━━━━━━━┩
+│ openai:gpt-4o-mini vs openai:gpt-5-mini   │    20 │   80% │  0.62 │ substantial    │
+│ openai:gpt-4o-mini vs openai:gpt-4.1-mini │    20 │   85% │  0.71 │ substantial    │
+│ openai:gpt-5-mini vs openai:gpt-4.1-mini  │    20 │   95% │  0.90 │ almost perfect │
+└───────────────────────────────────────────┴───────┴───────┴───────┴────────────────┘
+Krippendorff's alpha: 0.74 on majority verdicts, 0.82 counting every run (nominal)
+
+Flakiest cases (everyone's verdicts pooled)
+┏━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━┓
+┃ case           ┃ disagreement ┃ openai:gpt-4o-mini ┃ openai:gpt-5-mini ┃ openai:gpt-4.1-mini ┃ human ┃
+┡━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━┩
+│ hedged-answer  │          33% │ F F F F F          │ T T T T T         │ F F F F F           │ T     │
+│ largest-planet │          33% │ F F F F F          │ T T T T T         │ T T T T T           │ T     │
+│ speed-of-light │          33% │ F F F F F          │ T T T T T         │ T T T T T           │ T     │
+│ http-404       │          27% │ F F T F F          │ T T T T T         │ T T T T T           │ T     │
+└────────────────┴──────────────┴────────────────────┴───────────────────┴─────────────────────┴───────┘
 ```
 
-Look at `demo-lenient`: 98% self-agreement, "stable", and wrong on a fifth of the cases. Now look at `demo`: matches humans 100% of the time on average, and still flips on a third of the cases, so it will hand you a different release decision on Tuesday than on Monday. You need both numbers, and today you get neither.
+Look at `gpt-4o-mini`: 98% self-agreement, "stable", and wrong on a fifth of the cases. It failed "Jupiter is the largest, followed by Saturn" because the answer mentioned Saturn. It failed "about 300,000 km per second" because the reference said 299,792. `gpt-5-mini` passed all twenty. Same rubric, same cases, and the two judges hand you a different verdict on one case in five. On its own dashboard each judge looks fine. You need the comparison, and today you get a single number.
 
-With a real judge:
-
-```bash
-export OPENAI_API_KEY=...        # and/or ANTHROPIC_API_KEY
-mistrial run cases.jsonl --judge openai:gpt-5-mini --judge anthropic:claude-sonnet-5-5 --runs 5
-```
+The same run tells you that a CI gate at a 0.45 pass mark on `gpt-4o-mini` would go red 81% of the time with nothing changed, that `gpt-4o-mini` changes its verdict on 15% of cases when the rubric is reworded while `gpt-5-mini` changes none, and that moving your 0.6 pass mark from `gpt-4o-mini` to `gpt-5-mini` means about 0.8 on the new judge. All of that is one command each, shown in the GIF above.
 
 You get the card in the terminal, a single-file `report.html` you can send to anyone, and JSON for machines.
 

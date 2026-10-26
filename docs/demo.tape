@@ -1,5 +1,13 @@
 # VHS tape for the README demo: `vhs docs/demo.tape` writes docs/demo.gif and docs/demo.mp4
 # https://github.com/charmbracelet/vhs
+#
+# The judges are real OpenAI models. Before recording, warm the cache with live calls:
+#   export OPENAI_API_KEY=...
+#   mistrial run examples/cases.jsonl -j openai:gpt-4o-mini -j openai:gpt-5-mini -j openai:gpt-4.1-mini --runs 5 --pass-mark 0.45 --out-dir /tmp/mtdemo --html none
+#   mistrial rubric-check examples/cases.jsonl -j openai:gpt-4o-mini -j openai:gpt-5-mini --out-dir /tmp/mtdemo
+#   mkdir -p /tmp/mtdemo2 && cp /tmp/mtdemo/cache.sqlite /tmp/mtdemo2/
+#   mistrial run examples/cases.jsonl -j openai:gpt-4o-mini -j openai:gpt-5-mini --runs 3 -q --html none --out-dir /tmp/mtdemo2
+# The recording then replays those real replies from the cache, so the GIF stays short.
 
 Output docs/demo.gif
 Output docs/demo.mp4
@@ -14,15 +22,26 @@ Set Theme "Catppuccin Mocha"
 Set TypingSpeed 25ms
 
 Hide
-Type "export DYLD_LIBRARY_PATH=/opt/homebrew/opt/expat/lib; export PATH=$PWD/.venv/bin:$PATH; export PS1='$ '; rm -rf /tmp/jfdemo /tmp/jfdemo2; clear"
+Type "export DYLD_LIBRARY_PATH=/opt/homebrew/opt/expat/lib; export PATH=$PWD/.venv/bin:$PATH; export PS1='$ '; clear"
 Enter
 Sleep 500ms
 Show
 
-Type "# mistrial: is your LLM judge flaky?  Three FAKE judges, built flaky on purpose. Twenty cases, five runs. No API key."
+Type "# mistrial: is your LLM judge flaky?  Three real OpenAI judges, 20 cases, 5 runs each.  (replies replayed from cache)"
 Enter
 Sleep 1.5s
-Type "mistrial run examples/cases.jsonl -j demo -j demo:flaky -j demo:lenient --runs 5 --top 4 --pass-mark 0.55 --html none --out-dir /tmp/jfdemo"
+Type "mistrial run examples/cases.jsonl -j openai:gpt-4o-mini -j openai:gpt-5-mini -j openai:gpt-4.1-mini --runs 5 --top 4 --pass-mark 0.45 --html none --out-dir /tmp/mtdemo"
+Enter
+Sleep 11s
+
+Hide
+Type "clear"
+Enter
+Show
+Type "# gpt-4o-mini looks 'stable' and is wrong on a fifth of the cases.  Does its verdict depend on how the rubric is worded?"
+Enter
+Sleep 1.5s
+Type "mistrial rubric-check examples/cases.jsonl -j openai:gpt-4o-mini -j openai:gpt-5-mini --out-dir /tmp/mtdemo"
 Enter
 Sleep 9s
 
@@ -30,21 +49,10 @@ Hide
 Type "clear"
 Enter
 Show
-Type "# The fix, measured: the same flaky judge wrapped in a 5-vote majority, asked adaptively."
+Type "# Switching from gpt-4o-mini to gpt-5-mini?  See which cases move, and what your pass mark becomes on the new judge."
 Enter
 Sleep 1.5s
-Type "mistrial run examples/cases.jsonl -j demo:flaky --runs 5 --stabilize 5 --adaptive --top 0 --html none --out-dir /tmp/jfdemo"
-Enter
-Sleep 7s
-
-Hide
-Type "clear"
-Enter
-Show
-Type "# Does the verdict depend on how the rubric is worded?  Reword it three ways, then flip the criterion."
-Enter
-Sleep 1.5s
-Type "mistrial rubric-check examples/cases.jsonl -j demo -j demo:flaky --out-dir /tmp/jfdemo"
+Type "mistrial migrate /tmp/mtdemo2/runs/*.json --pass-mark 0.6"
 Enter
 Sleep 8s
 
@@ -52,21 +60,7 @@ Hide
 Type "clear"
 Enter
 Show
-Type "# Switching judge models?  See what moved, and what your pass mark becomes on the new judge."
-Enter
-Sleep 1.5s
-Type "mistrial run examples/cases.jsonl -j demo:steady -j demo:lenient --runs 3 -q --html none --out-dir /tmp/jfdemo2"
-Enter
-Sleep 800ms
-Type "mistrial migrate /tmp/jfdemo2/runs/*.json --pass-mark 0.7"
-Enter
-Sleep 6s
-
-Hide
-Type "clear"
-Enter
-Show
-Type "# Real judges: openai:gpt-5-mini  anthropic:claude-sonnet-5-5  gemini:gemini-2.5-flash  ollama:llama3.1  my_evals:fn"
+Type "# Works with openai:*  anthropic:*  gemini:*  groq:*  ollama:*  or your own my_evals:fn.  No key?  'mistrial demo' runs fake judges."
 Enter
 Sleep 1s
 Type "pip install mistrial"
