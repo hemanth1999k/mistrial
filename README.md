@@ -84,6 +84,31 @@ What the run says, in order:
 - **Switching from gpt-5.4-nano to gpt-5.5 changes 6 verdicts**, and a 0.5 pass mark on the old judge is about 0.62 on the new one.
 - **The fix works and you can see by how much.** gpt-5.4-nano wrapped in a 5-vote majority goes from 92% to 99% self-agreement, and adaptive re-asking got there with 177 fewer calls than asking five times everywhere.
 
+### Stronger judges are not immune, they are harder to catch
+
+On the 32 tricky cases, gpt-5.5 and the three gpt-6 judges never flip. So we wrote `examples/hard.jsonl`: 64 cases that pit precision against reasonableness. Rounding that is close enough or not, unit conversions, hedges that commit to the right answer and hedges that don't, extra facts that are right and extra facts that are wrong, equivalent code, multi-step answers with a wrong step and a right total. Six judges, five runs each, 1,920 live verdicts on 26 October 2026.
+
+| judge | self-agreement | flipped | vs human | rubric rewording moves |
+|---|---|---|---|---|
+| gpt-5.4-nano | 93% | 9/64 | 81% (κ 0.63) | — |
+| gpt-5.4-mini | 98% | 3/64 | 91% (κ 0.81) | — |
+| gpt-5.5 | 99% | 1/64 | 100% (κ 1.00) | — |
+| gpt-6-astra | 99% | 1/64 | 98% (κ 0.97) | 2% |
+| gpt-6-luna | 98% | 2/64 | 97% (κ 0.94) | 5% |
+| gpt-6.1-sol | 99% | 2/64 | 98% (κ 0.97) | 2% |
+
+Every gpt-6 judge flipped, and the rationales show what they flip on:
+
+- **gpt-6.1-sol on "6.02 x 10^23" for Avogadro's number**: fails it four runs out of five for "omits the required unit, per mole", then passes it because "per mole is implicit in the context."
+- **gpt-6-astra on a shirt-price answer with the right total and wrong working**: fails it four times, "25% of $20 is $5, not $4", then passes it once because "the final price matches the reference."
+- **gpt-6-luna on "two hydrogen atoms bonded to one oxygen atom" for H2O**: F, T, F, T, F across five runs. gpt-5.5 flipped on the same case.
+
+The pattern: weak judges flip everywhere, strong judges flip exactly where a reasonable person could go either way, at 1 to 3% of cases. On an eval of a few hundred cases that is still several verdicts that depend on which run you got. And the bigger number is between tiers: Avogadro without "per mole" passes on every gpt-5 judge and fails on every gpt-6 judge; "32 degrees Fahrenheit" for the freezing point fails on both 5.4 judges and passes on everything above. Kappa between gpt-5.4-nano and gpt-6.1-sol is 0.60. Krippendorff's alpha across all six is 0.81, across the three gpt-6 judges 0.97.
+
+One more thing the run caught: OpenAI's moderation rejected one of gpt-6-luna's 320 calls, on a question about `sum(xs) / len(xs)`, as a flagged prompt. The parser audit recorded it and marked that judge "fragile". A pipeline without error accounting would have counted that as a fail or skipped it silently.
+
+Both sets ship with the package. `examples/tricky.jsonl` is where cheap judges fall apart; `examples/hard.jsonl` is where the expensive ones do.
+
 You get the card in the terminal, a single-file `report.html` you can send to anyone, JSON for machines, and markdown for a pull request.
 
 <p align="center">

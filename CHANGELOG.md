@@ -4,7 +4,8 @@ All notable changes to mistrial are recorded here. The format follows [Keep a Ch
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+- `examples/hard.jsonl`: 64 cases that pit precision against reasonableness (rounding, units, hedges, extra facts, equivalent code, multi-step answers with a wrong step). Built because gpt-5.5 and the gpt-6 judges never flip on the tricky set; on this one every one of them does. README has the six-judge run.
 
 ## [0.2.1] - 2026-10-26
 

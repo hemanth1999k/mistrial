@@ -1,0 +1,64 @@
+{"id": "round-pi-2dp", "inputs": "What is the value of pi to two decimal places?", "outputs": "3.14", "reference_outputs": "3.14", "label": true}
+{"id": "round-pi-truncated-5dp", "inputs": "What is pi to five decimal places?", "outputs": "3.14159", "reference_outputs": "3.14159", "label": true}
+{"id": "round-pi-wrong-5dp", "inputs": "What is pi to five decimal places?", "outputs": "3.14158", "reference_outputs": "3.14159", "label": false}
+{"id": "round-light-speed", "inputs": "What is the speed of light in a vacuum, roughly?", "outputs": "About 300,000 km per second.", "reference_outputs": "299,792 km/s", "label": true}
+{"id": "round-light-speed-exact-asked", "inputs": "What is the speed of light in a vacuum, exactly, in km/s?", "outputs": "About 300,000 km per second.", "reference_outputs": "299,792.458 km/s", "label": false}
+{"id": "round-everest", "inputs": "How tall is Mount Everest, approximately?", "outputs": "Roughly 8,850 metres.", "reference_outputs": "8,849 m", "label": true}
+{"id": "round-everest-off", "inputs": "How tall is Mount Everest, approximately?", "outputs": "Roughly 8,000 metres.", "reference_outputs": "8,849 m", "label": false}
+{"id": "round-body-temp", "inputs": "What is normal human body temperature, approximately?", "outputs": "About 37 degrees Celsius.", "reference_outputs": "about 37 C (36.5 to 37.5)", "label": true}
+{"id": "round-earth-radius-ok", "inputs": "What is the radius of the Earth, approximately?", "outputs": "Around 6,400 km.", "reference_outputs": "about 6,371 km", "label": true}
+{"id": "round-earth-radius-far", "inputs": "What is the radius of the Earth, approximately?", "outputs": "Around 5,000 km.", "reference_outputs": "about 6,371 km", "label": false}
+{"id": "round-avogadro", "inputs": "What is Avogadro's number, approximately?", "outputs": "6.02 x 10^23", "reference_outputs": "6.022 x 10^23 per mole", "label": true}
+{"id": "unit-kmh-to-mph", "inputs": "How fast is 100 km/h in miles per hour, roughly?", "outputs": "About 62 mph.", "reference_outputs": "62.1 mph", "label": true}
+{"id": "unit-freezing-f", "inputs": "At what temperature does water freeze at sea level?", "outputs": "32 degrees Fahrenheit.", "reference_outputs": "0 C", "label": true}
+{"id": "unit-kg-to-lb", "inputs": "How much is 1 kilogram in pounds, roughly?", "outputs": "About 2.2 pounds.", "reference_outputs": "2.205 lb", "label": true}
+{"id": "unit-kg-to-lb-wrong", "inputs": "How much is 1 kilogram in pounds, roughly?", "outputs": "About 2.8 pounds.", "reference_outputs": "2.205 lb", "label": false}
+{"id": "unit-height-cm", "inputs": "How tall is 5 feet 11 inches in centimetres?", "outputs": "About 180 cm.", "reference_outputs": "180.3 cm", "label": true}
+{"id": "unit-gallon-litres", "inputs": "How many litres are in a US gallon, roughly?", "outputs": "About 3.8 litres.", "reference_outputs": "3.785 L", "label": true}
+{"id": "unit-marathon-miles", "inputs": "How long is a marathon?", "outputs": "26.2 miles.", "reference_outputs": "42.195 km", "label": true}
+{"id": "unit-light-year-miles", "inputs": "How far is a light year, roughly?", "outputs": "About 6 trillion miles.", "reference_outputs": "about 9.46 trillion km", "label": true}
+{"id": "unit-utc-to-est", "inputs": "What time is 15:00 UTC in US Eastern Standard Time?", "outputs": "10:00 AM.", "reference_outputs": "10:00 EST", "label": true}
+{"id": "unit-utc-to-est-wrong", "inputs": "What time is 15:00 UTC in US Eastern Standard Time?", "outputs": "11:00 AM.", "reference_outputs": "10:00 EST", "label": false}
+{"id": "hedge-commits-right", "inputs": "What is the capital of Australia?", "outputs": "I think it's Canberra, though many people assume Sydney.", "reference_outputs": "Canberra", "label": true}
+{"id": "hedge-two-options", "inputs": "What is the capital of Australia?", "outputs": "Either Sydney or Canberra.", "reference_outputs": "Canberra", "label": false}
+{"id": "hedge-commits-wrong", "inputs": "What is the capital of Australia?", "outputs": "Probably Sydney.", "reference_outputs": "Canberra", "label": false}
+{"id": "hedge-year-range", "inputs": "In what year did the French Revolution begin?", "outputs": "Somewhere between 1789 and 1799.", "reference_outputs": "1789", "label": false}
+{"id": "hedge-year-maybe", "inputs": "In what year did humans first land on the Moon?", "outputs": "1969, if I remember right.", "reference_outputs": "1969", "label": true}
+{"id": "hedge-year-either", "inputs": "In what year did humans first land on the Moon?", "outputs": "1968 or 1969.", "reference_outputs": "1969", "label": false}
+{"id": "hedge-depends-wrongly", "inputs": "What is the tallest mountain on Earth above sea level?", "outputs": "Everest or K2, depending on how you measure.", "reference_outputs": "Mount Everest", "label": false}
+{"id": "hedge-not-sure-right", "inputs": "Which planet is the largest in the solar system?", "outputs": "Not 100% sure, but Jupiter.", "reference_outputs": "Jupiter", "label": true}
+{"id": "extra-right-fact", "inputs": "Who wrote Hamlet?", "outputs": "William Shakespeare, born in Stratford-upon-Avon in 1564.", "reference_outputs": "William Shakespeare", "label": true}
+{"id": "extra-wrong-fact", "inputs": "Who wrote Hamlet?", "outputs": "William Shakespeare, born in London in 1554.", "reference_outputs": "William Shakespeare", "label": false}
+{"id": "extra-population", "inputs": "What is the capital of France?", "outputs": "Paris, home to about two million people in the city proper.", "reference_outputs": "Paris", "label": true}
+{"id": "extra-second-place", "inputs": "Which planet is the largest in the solar system?", "outputs": "Jupiter, followed by Saturn.", "reference_outputs": "Jupiter", "label": true}
+{"id": "extra-contradiction", "inputs": "Which planet is the largest in the solar system?", "outputs": "Jupiter, which is slightly smaller than Saturn.", "reference_outputs": "Jupiter", "label": false}
+{"id": "code-mean-equivalent", "inputs": "Write a Python expression for the mean of a non-empty list xs.", "outputs": "sum(xs) / len(xs)", "reference_outputs": "statistics.mean(xs)", "label": true}
+{"id": "code-even-bitwise", "inputs": "Write a Python expression that is True when integer n is even.", "outputs": "not n & 1", "reference_outputs": "n % 2 == 0", "label": true}
+{"id": "code-even-wrong", "inputs": "Write a Python expression that is True when integer n is even.", "outputs": "n % 2 == 1", "reference_outputs": "n % 2 == 0", "label": false}
+{"id": "code-sort-by-value", "inputs": "Write a Python expression that sorts dict d's items by value, ascending.", "outputs": "sorted(d.items(), key=operator.itemgetter(1))", "reference_outputs": "sorted(d.items(), key=lambda kv: kv[1])", "label": true}
+{"id": "code-squares-map", "inputs": "Write a Python expression for a list of the squares of the integers in xs.", "outputs": "list(map(lambda x: x * x, xs))", "reference_outputs": "[x ** 2 for x in xs]", "label": true}
+{"id": "code-unique-check", "inputs": "Write a Python expression that is True when list a has no duplicate elements.", "outputs": "len(set(a)) == len(a)", "reference_outputs": "len(a) == len(set(a))", "label": true}
+{"id": "code-reverse-in-place-misuse", "inputs": "Write a Python expression that evaluates to the reverse of list a.", "outputs": "a.reverse()", "reference_outputs": "a[::-1]", "label": false}
+{"id": "code-off-by-one", "inputs": "Write a Python expression for the sum of the integers from 1 to n inclusive.", "outputs": "sum(range(1, n))", "reference_outputs": "sum(range(1, n + 1))", "label": false}
+{"id": "code-sum-formula", "inputs": "Write a Python expression for the sum of the integers from 1 to n inclusive.", "outputs": "n * (n + 1) // 2", "reference_outputs": "sum(range(1, n + 1))", "label": true}
+{"id": "math-times-wrong", "inputs": "What is 7 x 8?", "outputs": "54", "reference_outputs": "56", "label": false}
+{"id": "math-percent", "inputs": "What is 15% of 200?", "outputs": "30", "reference_outputs": "30", "label": true}
+{"id": "math-prime-91", "inputs": "Is 91 a prime number?", "outputs": "Yes, 91 is prime.", "reference_outputs": "No, 91 = 7 x 13", "label": false}
+{"id": "math-prime-17", "inputs": "Is 17 a prime number?", "outputs": "Yes.", "reference_outputs": "Yes, 17 is prime", "label": true}
+{"id": "math-fraction-decimal", "inputs": "What is 1000 divided by 3, to two decimal places?", "outputs": "333.33", "reference_outputs": "333.33", "label": true}
+{"id": "math-fraction-rounded-up", "inputs": "What is 1000 divided by 3, to two decimal places?", "outputs": "333.34", "reference_outputs": "333.33", "label": false}
+{"id": "math-order-of-ops", "inputs": "What is 12 / 4 * 3?", "outputs": "9", "reference_outputs": "9", "label": true}
+{"id": "math-order-of-ops-wrong", "inputs": "What is 12 / 4 * 3?", "outputs": "1", "reference_outputs": "9", "label": false}
+{"id": "steps-discount-tax-right", "inputs": "A shirt costs $20. It is 25% off, then 10% sales tax is added to the discounted price. What is the final price?", "outputs": "25% off: $20 - $5 = $15. Tax: $15 x 1.10 = $16.50. Final price: $16.50.", "reference_outputs": "$16.50", "label": true}
+{"id": "steps-discount-tax-wrong-step-right-answer", "inputs": "A shirt costs $20. It is 25% off, then 10% sales tax is added to the discounted price. What is the final price?", "outputs": "25% off: $20 - $4 = $16. Tax: $16 x 1.10 = $16.50. Final price: $16.50.", "reference_outputs": "$16.50", "label": false}
+{"id": "steps-discount-tax-wrong", "inputs": "A shirt costs $20. It is 25% off, then 10% sales tax is added to the discounted price. What is the final price?", "outputs": "Final price: $16.00.", "reference_outputs": "$16.50", "label": false}
+{"id": "steps-age-right", "inputs": "Ana is twice as old as Ben. In 6 years Ana will be 30. How old is Ben now?", "outputs": "Ana is 24 now, so Ben is 12.", "reference_outputs": "12", "label": true}
+{"id": "steps-age-wrong", "inputs": "Ana is twice as old as Ben. In 6 years Ana will be 30. How old is Ben now?", "outputs": "Ana will be 30, so Ben is 15.", "reference_outputs": "12", "label": false}
+{"id": "neg-correct-no", "inputs": "Does water boil at 90 degrees Celsius at sea level?", "outputs": "No. At sea level water boils at 100 C; it boils at 90 C only at lower pressure, such as high altitude.", "reference_outputs": "No, it boils at 100 C at sea level", "label": true}
+{"id": "neg-wrong-yes", "inputs": "Is the Great Wall of China visible to the naked eye from low Earth orbit?", "outputs": "Yes, it is one of the few human structures visible from orbit.", "reference_outputs": "No, it is not visible to the naked eye from orbit", "label": false}
+{"id": "neg-double-negative", "inputs": "Is it true that bats are not blind?", "outputs": "It is not false; bats can see.", "reference_outputs": "Yes, bats can see", "label": true}
+{"id": "partial-three-of-four", "inputs": "Name the four DNA nucleobases.", "outputs": "Adenine, thymine, and guanine.", "reference_outputs": "adenine, thymine, guanine, cytosine", "label": false}
+{"id": "partial-all-four-reordered", "inputs": "Name the four DNA nucleobases.", "outputs": "Cytosine, guanine, adenine, thymine.", "reference_outputs": "adenine, thymine, guanine, cytosine", "label": true}
+{"id": "partial-four-plus-wrong", "inputs": "Name the four DNA nucleobases.", "outputs": "Adenine, thymine, guanine, cytosine, and uracil.", "reference_outputs": "adenine, thymine, guanine, cytosine", "label": false}
+{"id": "synonym-dna", "inputs": "What does DNA stand for?", "outputs": "Deoxyribonucleic acid.", "reference_outputs": "deoxyribonucleic acid", "label": true}
+{"id": "synonym-h2o", "inputs": "What is the chemical formula for water?", "outputs": "Two hydrogen atoms bonded to one oxygen atom.", "reference_outputs": "H2O", "label": true}
