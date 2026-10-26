@@ -20,23 +20,6 @@ mistrial run cases.jsonl -j openai:gpt-5.4-mini -j openai:gpt-5.5 --runs 5
 
 No key? `pipx run mistrial demo` runs three fake judges that are built to be flaky on purpose.
 
-## Commands
-
-| What you want to do | Command |
-|---|---|
-| Try it, no API key | `mistrial demo` |
-| Judge your own cases, five runs | `mistrial run cases.jsonl -j openai:gpt-5.4-mini --runs 5` |
-| Compare two judge models | `mistrial run cases.jsonl -j openai:gpt-5.5 -j anthropic:claude-sonnet-5-5 --runs 5` |
-| Use your own evaluator function | `mistrial run cases.jsonl -j my_evals:correctness --runs 5` |
-| Fail CI when the judge is flaky | `mistrial run cases.jsonl -j openai:gpt-5.4-mini --min-self-agreement 0.95 --quiet` |
-| Fix it: majority vote of five samples | `mistrial run cases.jsonl -j openai:gpt-5.4-mini --stabilize 5` |
-| Re-render a saved run as HTML or markdown | `mistrial report .mistrial/runs/<run>.json --html card.html` |
-| List providers and their env vars | `mistrial providers` |
-| List rubrics | `mistrial rubrics` |
-| Every flag | `mistrial --help`, `mistrial run --help` |
-
-The [probes](#the-probes) (gate risk, rubric wording, migration, sentinel, drift, escalate) each have a command of their own, and all of them work on the demo judges.
-
 ## The problem
 
 You ship AI features based on a score from an LLM judge. The score gates CI, decides which prompt wins, and goes on the dashboard. But the judge is a model sampling from a distribution. Ask it the same question twice and it changes its verdict on some of your cases. Swap the model and it changes its mind on more. Reword the rubric without changing its meaning and it moves again. One eval run is one sample from a noisy process, and almost nobody measures the noise.
@@ -421,6 +404,23 @@ Everything lives in `src/mistrial/stats.py`, is pure Python, and is tested again
 Readings use the Landis and Koch bands for kappa and alpha: slight, fair, moderate, substantial, almost perfect. They are labels for humans, not thresholds for machines. Set your own gates.
 
 Known limits: kappa on a handful of cases is not evidence, and a judge that is perfectly consistent can be consistently wrong. The card shows both numbers so neither hides the other.
+
+## Commands
+
+| What you want to do | Command |
+|---|---|
+| Try it, no API key | `mistrial demo` |
+| Judge your own cases, five runs | `mistrial run cases.jsonl -j openai:gpt-5.4-mini --runs 5` |
+| Compare two judge models | `mistrial run cases.jsonl -j openai:gpt-5.5 -j anthropic:claude-sonnet-5-5 --runs 5` |
+| Use your own evaluator function | `mistrial run cases.jsonl -j my_evals:correctness --runs 5` |
+| Fail CI when the judge is flaky | `mistrial run cases.jsonl -j openai:gpt-5.4-mini --min-self-agreement 0.95 --quiet` |
+| Fix it: majority vote of five samples | `mistrial run cases.jsonl -j openai:gpt-5.4-mini --stabilize 5` |
+| Re-render a saved run as HTML or markdown | `mistrial report .mistrial/runs/<run>.json --html card.html` |
+| List providers and their env vars | `mistrial providers` |
+| List rubrics | `mistrial rubrics` |
+| Every flag | `mistrial --help`, `mistrial run --help` |
+
+The [probes](#the-probes) (gate risk, rubric wording, migration, sentinel, drift, escalate) each have a command of their own, and all of them work on the demo judges.
 
 ## How is this different
 
