@@ -3,10 +3,11 @@
 #
 # The judges are real OpenAI models. Before recording, warm the cache with live calls:
 #   export OPENAI_API_KEY=...
-#   mistrial run examples/cases.jsonl -j openai:gpt-4o-mini -j openai:gpt-5-mini -j openai:gpt-4.1-mini --runs 5 --pass-mark 0.45 --out-dir /tmp/mtdemo --html none
-#   mistrial rubric-check examples/cases.jsonl -j openai:gpt-4o-mini -j openai:gpt-5-mini --out-dir /tmp/mtdemo
-#   mkdir -p /tmp/mtdemo2 && cp /tmp/mtdemo/cache.sqlite /tmp/mtdemo2/
-#   mistrial run examples/cases.jsonl -j openai:gpt-4o-mini -j openai:gpt-5-mini --runs 3 -q --html none --out-dir /tmp/mtdemo2
+#   mistrial run examples/tricky.jsonl -j openai:gpt-5.4-nano -j openai:gpt-5.4-mini -j openai:gpt-5.5 --runs 5 --pass-mark 0.5 --out-dir /tmp/mt2 --html none
+#   mistrial run examples/tricky.jsonl -j openai:gpt-5.4-nano --runs 5 --stabilize 5 --adaptive --out-dir /tmp/mt2 --html none
+#   mistrial rubric-check examples/tricky.jsonl -j openai:gpt-5.4-nano -j openai:gpt-5.5 --out-dir /tmp/mt2
+#   mkdir -p /tmp/mt2b && cp /tmp/mt2/cache.sqlite /tmp/mt2b/
+#   mistrial run examples/tricky.jsonl -j openai:gpt-5.4-nano -j openai:gpt-5.5 --runs 3 -q --html none --out-dir /tmp/mt2b
 # The recording then replays those real replies from the cache, so the GIF stays short.
 
 Output docs/demo.gif
@@ -16,7 +17,7 @@ Set Shell "bash"
 Set FontSize 13
 Set FontFamily "Menlo"
 Set Width 1280
-Set Height 960
+Set Height 1000
 Set Padding 22
 Set Theme "Catppuccin Mocha"
 Set TypingSpeed 25ms
@@ -27,21 +28,32 @@ Enter
 Sleep 500ms
 Show
 
-Type "# mistrial: is your LLM judge flaky?  Three real OpenAI judges, 20 cases, 5 runs each.  (replies replayed from cache)"
+Type "# mistrial: is your LLM judge flaky?  gpt-5.4-nano, gpt-5.4-mini and gpt-5.5 on 32 tricky cases, 5 runs each.  (real replies, replayed from cache)"
 Enter
 Sleep 1.5s
-Type "mistrial run examples/cases.jsonl -j openai:gpt-4o-mini -j openai:gpt-5-mini -j openai:gpt-4.1-mini --runs 5 --top 4 --pass-mark 0.45 --html none --out-dir /tmp/mtdemo"
+Type "mistrial run examples/tricky.jsonl -j openai:gpt-5.4-nano -j openai:gpt-5.4-mini -j openai:gpt-5.5 --runs 5 --top 6 --pass-mark 0.5 --html none --out-dir /tmp/mt2"
 Enter
-Sleep 11s
+Sleep 12s
 
 Hide
 Type "clear"
 Enter
 Show
-Type "# gpt-4o-mini looks 'stable' and is wrong on a fifth of the cases.  Does its verdict depend on how the rubric is worded?"
+Type "# The fix, measured: the flaky judge wrapped in a 5-vote majority, asked adaptively (extra calls only where the first two runs disagreed)."
 Enter
 Sleep 1.5s
-Type "mistrial rubric-check examples/cases.jsonl -j openai:gpt-4o-mini -j openai:gpt-5-mini --out-dir /tmp/mtdemo"
+Type "mistrial run examples/tricky.jsonl -j openai:gpt-5.4-nano --runs 5 --stabilize 5 --adaptive --top 0 --html none --out-dir /tmp/mt2"
+Enter
+Sleep 8s
+
+Hide
+Type "clear"
+Enter
+Show
+Type "# Does the verdict depend on how the rubric is worded?  Reword it three ways, then flip the criterion."
+Enter
+Sleep 1.5s
+Type "mistrial rubric-check examples/tricky.jsonl -j openai:gpt-5.4-nano -j openai:gpt-5.5 --out-dir /tmp/mt2"
 Enter
 Sleep 9s
 
@@ -49,10 +61,10 @@ Hide
 Type "clear"
 Enter
 Show
-Type "# Switching from gpt-4o-mini to gpt-5-mini?  See which cases move, and what your pass mark becomes on the new judge."
+Type "# Switching judge models?  See which cases move, and what your pass mark becomes on the new judge."
 Enter
 Sleep 1.5s
-Type "mistrial migrate /tmp/mtdemo2/runs/*.json --pass-mark 0.6"
+Type "mistrial migrate /tmp/mt2b/runs/*.json --pass-mark 0.5"
 Enter
 Sleep 8s
 

@@ -6,7 +6,11 @@ All notable changes to mistrial are recorded here. The format follows [Keep a Ch
 
 ### Changed
 - The project is called **mistrial**. Package, command, env vars (`MISTRIAL_BASE_URL`, `MISTRIAL_API_KEY`) and the `.mistrial/` directory all follow. It was briefly called judgeflake before any release.
-- README, demo GIF and report screenshot now show real OpenAI judges (`gpt-4o-mini`, `gpt-5-mini`, `gpt-4.1-mini`) on the bundled cases instead of the fake `demo` judges. The numbers in the README come from 300 live calls made on 2026-10-25.
+- README, demo GIF and report screenshot now show real, current OpenAI judges (`gpt-5.4-nano`, `gpt-5.4-mini`, `gpt-5.5`) instead of the fake `demo` judges. The numbers in the README come from 480 live calls made on 2026-10-25.
+- README opens with the problem, why nothing catches it today, and what mistrial does, with three diagrams in `docs/img/`.
+
+### Added
+- `examples/tricky.jsonl`: 32 labeled cases built to be hard to judge (hedges, rounding, unit conversions, extra details, equivalent code). The bundled `examples/cases.jsonl` stays as the easy set.
 - `mistrial demo` says up front that its three judges are fake and flaky on purpose.
 
 ## [0.2.0] - 2026-10-25

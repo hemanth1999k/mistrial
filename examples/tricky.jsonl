@@ -1,0 +1,32 @@
+{"id": "pi-rounded", "inputs": "What is pi to four decimal places?", "outputs": "3.1416", "reference_outputs": "3.1416", "label": true}
+{"id": "pi-truncated", "inputs": "What is pi to four decimal places?", "outputs": "3.1415", "reference_outputs": "3.1416", "label": false}
+{"id": "moon-miles", "inputs": "How far is the Moon from Earth, on average?", "outputs": "About 239,000 miles.", "reference_outputs": "About 384,400 km", "label": true}
+{"id": "austen-wrong-year", "inputs": "Who wrote Pride and Prejudice?", "outputs": "Jane Austen, published in 1811.", "reference_outputs": "Jane Austen", "label": false}
+{"id": "davinci-extra", "inputs": "Who painted the Mona Lisa?", "outputs": "Leonardo da Vinci, in the early 1500s.", "reference_outputs": "Leonardo da Vinci", "label": true}
+{"id": "great-wall-hedge", "inputs": "Is the Great Wall of China visible from space with the naked eye?", "outputs": "Probably not. Astronauts generally report they cannot see it unaided.", "reference_outputs": "No", "label": true}
+{"id": "tomato", "inputs": "Is a tomato a fruit or a vegetable?", "outputs": "Botanically a fruit, culinarily treated as a vegetable.", "reference_outputs": "A fruit (botanically)", "label": true}
+{"id": "primary-colors-partial", "inputs": "Name the three primary colors of light.", "outputs": "Red and green.", "reference_outputs": "Red, green and blue", "label": false}
+{"id": "inner-planets-order", "inputs": "List the planets closer to the Sun than Earth, in order starting from the Sun.", "outputs": "Venus, Mercury.", "reference_outputs": "Mercury, Venus", "label": false}
+{"id": "hypertension", "inputs": "What is the medical term for high blood pressure?", "outputs": "Hypertension.", "reference_outputs": "hypertension", "label": true}
+{"id": "ww2-year", "inputs": "When did World War II end?", "outputs": "1945.", "reference_outputs": "September 2, 1945", "label": true}
+{"id": "berlin-wall-vague", "inputs": "What year did the Berlin Wall fall?", "outputs": "In the late 1980s.", "reference_outputs": "1989", "label": false}
+{"id": "len-off-by-one", "inputs": "Write a Python expression for the number of elements in a list L.", "outputs": "len(L) - 1", "reference_outputs": "len(L)", "label": false}
+{"id": "reverse-string-equivalent", "inputs": "Write a Python expression that reverses a string s.", "outputs": "''.join(reversed(s))", "reference_outputs": "s[::-1]", "label": true}
+{"id": "wrong-language", "inputs": "Write a line of Python that prints hello.", "outputs": "console.log('hello')", "reference_outputs": "print('hello')", "label": false}
+{"id": "simplify-fraction", "inputs": "Simplify (x^2 - 1)/(x - 1).", "outputs": "x + 1, for x not equal to 1.", "reference_outputs": "x + 1", "label": true}
+{"id": "one-eighth", "inputs": "What is 1/8 as a decimal?", "outputs": "0.125", "reference_outputs": "0.125", "label": true}
+{"id": "percent-unit", "inputs": "What is 15% of 80?", "outputs": "12%", "reference_outputs": "12", "label": false}
+{"id": "ninety-one-prime", "inputs": "Is 91 a prime number?", "outputs": "Yes, 91 is prime.", "reference_outputs": "No. 91 = 7 x 13.", "label": false}
+{"id": "fahrenheit-approx", "inputs": "What is 100 degrees Fahrenheit in Celsius?", "outputs": "About 38 degrees Celsius.", "reference_outputs": "37.8 C", "label": true}
+{"id": "bolivia-capital", "inputs": "What is the capital of Bolivia?", "outputs": "La Paz.", "reference_outputs": "Sucre is the constitutional capital; La Paz is the seat of government.", "label": true}
+{"id": "nine-planets", "inputs": "How many planets are in the solar system?", "outputs": "Nine.", "reference_outputs": "Eight", "label": false}
+{"id": "gold-verbose", "inputs": "What is the chemical symbol for gold?", "outputs": "Gold's chemical symbol is Au, from the Latin aurum. Its atomic number is 79.", "reference_outputs": "Au", "label": true}
+{"id": "sky-blue-wrong-reason", "inputs": "Why is the sky blue?", "outputs": "Because it reflects the color of the ocean.", "reference_outputs": "Rayleigh scattering of sunlight by air molecules", "label": false}
+{"id": "ethanol-boiling", "inputs": "What is the boiling point of ethanol at 1 atm?", "outputs": "78 degrees Celsius.", "reference_outputs": "78.37 C", "label": true}
+{"id": "speed-of-sound-rough", "inputs": "What is the speed of sound in air at 20 degrees Celsius?", "outputs": "Roughly 300 m/s.", "reference_outputs": "343 m/s", "label": false}
+{"id": "refusal", "inputs": "What is the square root of 144?", "outputs": "I'm not able to help with that.", "reference_outputs": "12", "label": false}
+{"id": "arigato", "inputs": "How do you say 'thank you' in Japanese?", "outputs": "Arigatou (ありがとう).", "reference_outputs": "arigatō", "label": true}
+{"id": "mammals-superset", "inputs": "Which of these are mammals: dolphin, shark, bat?", "outputs": "Dolphin, bat and shark.", "reference_outputs": "Dolphin and bat", "label": false}
+{"id": "declaration-date-format", "inputs": "When was the US Declaration of Independence adopted?", "outputs": "4 July 1776.", "reference_outputs": "July 4, 1776", "label": true}
+{"id": "largest-country-hedge", "inputs": "What is the largest country by area?", "outputs": "Russia, or Canada if you exclude Russia's Asian territory.", "reference_outputs": "Russia", "label": false}
+{"id": "cpu-acronym", "inputs": "What does CPU stand for?", "outputs": "Central Processing Unit.", "reference_outputs": "central processing unit", "label": true}

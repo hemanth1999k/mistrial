@@ -265,7 +265,7 @@ class LLMJudge:
     @classmethod
     def from_spec(cls, spec: str, **kw: Any) -> "LLMJudge":
         if ":" not in spec:
-            raise ValueError(f"judge must look like <provider>:<model>, e.g. openai:gpt-5-mini, got {spec!r}")
+            raise ValueError(f"judge must look like <provider>:<model>, e.g. openai:gpt-5.4-mini, got {spec!r}")
         provider, _, model = spec.partition(":")
         return cls(provider=provider, model=model, **kw)
 
@@ -478,7 +478,7 @@ class StabilizedJudge:
 def stabilize(judge: Any, k: int = 5, *, name: str | None = None, cache: Cache | None = None, **judge_kw: Any) -> Callable[..., dict]:
     """Wrap an evaluator into a k-sample majority vote with the same signature.
 
-    `judge` is a spec string ("openai:gpt-5-mini", "my_evals:fn"), a Judge, or a plain function
+    `judge` is a spec string ("openai:gpt-5.4-mini", "my_evals:fn"), a Judge, or a plain function
     with the evaluator signature. Returns a function fn(inputs=, outputs=, reference_outputs=)
     that returns {"key", "score", "comment", "mistrial": {"votes", "agreement"}}. Plug it into
     LangSmith or openevals in place of the flaky one.

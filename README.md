@@ -12,78 +12,83 @@
   <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
 </p>
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/hemanth1999k/mistrial/main/docs/report.png" alt="mistrial HTML report: three judges, their self-agreement, agreement with each other, and the flakiest cases" width="820">
-</p>
-
-You ship AI features based on a score from an LLM judge. Ask that judge the same question twice and it changes its verdict on a tenth of your cases. Swap the model and it changes its mind on a quarter. One eval run is one sample from a noisy process, and almost nobody measures the noise.
-
-mistrial does. Point it at the evaluator you already use, run it a few times across one or more judge models, and get a **reliability card**: how often the judge agrees with itself, how much judges agree with each other, how they match human labels, and the exact cases that flip.
-
-## Quickstart
-
 ```bash
 pip install mistrial
-export OPENAI_API_KEY=...        # or ANTHROPIC_API_KEY, GEMINI_API_KEY, GROQ_API_KEY, ... see `mistrial providers`
-mistrial run cases.jsonl -j openai:gpt-4o-mini -j openai:gpt-5-mini -j openai:gpt-4.1-mini --runs 5
+export OPENAI_API_KEY=...        # or ANTHROPIC_API_KEY, GEMINI_API_KEY, GROQ_API_KEY ... see `mistrial providers`
+mistrial run cases.jsonl -j openai:gpt-5.4-mini -j openai:gpt-5.5 --runs 5
 ```
 
 No key? `pipx run mistrial demo` runs three fake judges that are built to be flaky on purpose.
 
-Here is the real thing: three OpenAI judges on the twenty bundled cases, five runs each, 300 live calls.
+## The problem
 
-<p align="center"><img src="https://raw.githubusercontent.com/hemanth1999k/mistrial/main/docs/demo.gif" alt="mistrial terminal demo with real OpenAI judges: the reliability card, rubric-check and migrate" width="900"></p>
+You ship AI features based on a score from an LLM judge. The score gates CI, decides which prompt wins, and goes on the dashboard. But the judge is a model sampling from a distribution. Ask it the same question twice and it changes its verdict on some of your cases. Swap the model and it changes its mind on more. Reword the rubric without changing its meaning and it moves again. One eval run is one sample from a noisy process, and almost nobody measures the noise.
 
-```
-mistrial · 20 cases · 3 judges · 5 runs each · 300 verdicts in 50.68s
+<p align="center"><img src="https://raw.githubusercontent.com/hemanth1999k/mistrial/main/docs/img/problem.png" alt="Three ways a judge's verdict moves with nothing changed: across runs, across judges, across rubric wordings. Real replies from gpt-5.4-nano, gpt-5.4-mini and gpt-5.5." width="1000"></p>
 
-Consistency (same judge, asked again)
-┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━┓
-┃ judge               ┃ self-agreement ┃ flipped cases ┃      vs human ┃ errors ┃ reading ┃
-┡━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━┩
-│ openai:gpt-4o-mini  │            98% │     1/20 (5%) │  80% (κ 0.62) │      0 │ stable  │
-│ openai:gpt-5-mini   │           100% │     0/20 (0%) │ 100% (κ 1.00) │      0 │ stable  │
-│ openai:gpt-4.1-mini │           100% │     0/20 (0%) │  95% (κ 0.90) │      0 │ stable  │
-└─────────────────────┴────────────────┴───────────────┴───────────────┴────────┴─────────┘
+These are real replies. On the first case, gpt-5.4-nano wrote "the added mention of 1811 does not contradict the core requirement" on one run and "1811 is not part of the reference, so the answer is incorrect" on the next. On the second, it worked out that 239,000 miles is 384,000 km and then failed the answer for being in miles. Each of those judges reports a clean score on its own. The flakiness only shows up when you ask again and compare.
 
-Agreement (different judges)
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━━━━━━━━━━┓
-┃ pair                                      ┃ cases ┃ agree ┃ kappa ┃ reading        ┃
-┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━━━━━━━━━━┩
-│ openai:gpt-4o-mini vs openai:gpt-5-mini   │    20 │   80% │  0.62 │ substantial    │
-│ openai:gpt-4o-mini vs openai:gpt-4.1-mini │    20 │   85% │  0.71 │ substantial    │
-│ openai:gpt-5-mini vs openai:gpt-4.1-mini  │    20 │   95% │  0.90 │ almost perfect │
-└───────────────────────────────────────────┴───────┴───────┴───────┴────────────────┘
-Krippendorff's alpha: 0.74 on majority verdicts, 0.82 counting every run (nominal)
+The research agrees. The same judge gives different scores to the same answer across runs ([Rating Roulette, EMNLP 2025](https://aclanthology.org/2025.findings-emnlp.1361.pdf)). Raw percent agreement overstates reliability by 30 to 40 points compared with chance-corrected kappa, across 21 judges ([Reliability without Validity, 2026](https://arxiv.org/abs/2606.19544)).
 
-Flakiest cases (everyone's verdicts pooled)
-┏━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━┓
-┃ case           ┃ disagreement ┃ openai:gpt-4o-mini ┃ openai:gpt-5-mini ┃ openai:gpt-4.1-mini ┃ human ┃
-┡━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━┩
-│ hedged-answer  │          33% │ F F F F F          │ T T T T T         │ F F F F F           │ T     │
-│ largest-planet │          33% │ F F F F F          │ T T T T T         │ T T T T T           │ T     │
-│ speed-of-light │          33% │ F F F F F          │ T T T T T         │ T T T T T           │ T     │
-│ http-404       │          27% │ F F T F F          │ T T T T T         │ T T T T T           │ T     │
-└────────────────┴──────────────┴────────────────────┴───────────────────┴─────────────────────┴───────┘
-```
+## Why nothing catches it today
 
-Look at `gpt-4o-mini`: 98% self-agreement, "stable", and wrong on a fifth of the cases. It failed "Jupiter is the largest, followed by Saturn" because the answer mentioned Saturn. It failed "about 300,000 km per second" because the reference said 299,792. `gpt-5-mini` passed all twenty. Same rubric, same cases, and the two judges hand you a different verdict on one case in five. On its own dashboard each judge looks fine. You need the comparison, and today you get a single number.
-
-The same run tells you that a CI gate at a 0.45 pass mark on `gpt-4o-mini` would go red 81% of the time with nothing changed, that `gpt-4o-mini` changes its verdict on 15% of cases when the rubric is reworded while `gpt-5-mini` changes none, and that moving your 0.6 pass mark from `gpt-4o-mini` to `gpt-5-mini` means about 0.8 on the new judge. All of that is one command each, shown in the GIF above.
-
-You get the card in the terminal, a single-file `report.html` you can send to anyone, and JSON for machines.
-
-## Why
-
-LLM-as-a-judge is how most teams grade their AI outputs now. The score it produces is treated as ground truth: it gates CI, decides which prompt wins, and goes on the dashboard. But the judge is itself a model sampling from a distribution.
-
-- Judges have low intra-rater reliability: the same judge gives different scores to the same answer across runs ([Rating Roulette, EMNLP 2025](https://aclanthology.org/2025.findings-emnlp.1361.pdf)).
-- Raw percent agreement overstates reliability by 30 to 40 points compared with chance-corrected kappa, across 21 judges ([Reliability without Validity, 2026](https://arxiv.org/abs/2606.19544)).
-- None of the mainstream eval platforms re-run a judge and report its self-agreement. They report one score and stop.
-
-The statistics for this problem are a century old. Test-retest reliability, Cohen's kappa and Krippendorff's alpha are standard in any field that uses human raters. They just never made it into a tool you can run in ten seconds against the evaluator you already have. That is the whole point of mistrial.
+- **Eval platforms report one number and stop.** LangSmith, Braintrust, Langfuse and friends run the judge once per case. Some can repeat an experiment and show a standard deviation, none report self-agreement, kappa between judges, or which cases flipped.
+- **The statistics exist, but not as a tool.** Test-retest reliability, Cohen's kappa and Krippendorff's alpha are a century old and standard in every field that uses human raters. They live in research notebooks, not in something you can run against your evaluator in a minute.
+- **The projects that tried stop at the card.** judgecheck, judgebench, Assay rejudge and judge-drift-sentinel each cover a piece of this well, and [docs/COMPARISON.md](docs/COMPARISON.md) credits what each does better. None of them take your existing evaluator function, run in CI, or tell you what to do when the judge is flaky.
 
 **Before "how good is my model?" you need "can I trust the number that told me?"**
+
+## What mistrial does
+
+<p align="center"><img src="https://raw.githubusercontent.com/hemanth1999k/mistrial/main/docs/img/how.png" alt="You bring cases, any judge and a rubric. mistrial re-asks across runs, judges and rubric wordings. You get a reliability card, a verdict on the judge, and a stabilized judge as the fix." width="1000"></p>
+
+Point it at the evaluator you already use: a model name, or the function you run in LangSmith or openevals. It asks the judge several times, across one or more judge models, and under rewordings of the rubric, and reports the spread: self-agreement, flipped cases, kappa and alpha between judges, accuracy against your human labels, and the exact cases that move. Then it does something about it: a gate for CI, a stabilized judge with the same signature, and a list of the cases a human should look at.
+
+## Real numbers
+
+Three current OpenAI judges on `examples/tricky.jsonl`, 32 cases built to be hard to judge (hedges, rounding, unit conversions, extra details, equivalent code), five runs each. 480 live calls on 25 October 2026. Every number below is from that run, and the GIF replays those replies.
+
+<p align="center"><img src="https://raw.githubusercontent.com/hemanth1999k/mistrial/main/docs/img/results.png" alt="gpt-5.4-nano 92% self-agreement and 81% vs human, gpt-5.4-mini 95% and 88%, gpt-5.5 100% and 91%. Gate false alarm 90% on gpt-5.4-mini. Rubric rewording moves 16% of gpt-5.4-nano verdicts. A 5-vote majority takes gpt-5.4-nano to 99% self-agreement." width="1000"></p>
+
+<p align="center"><img src="https://raw.githubusercontent.com/hemanth1999k/mistrial/main/docs/demo.gif" alt="mistrial terminal demo with real OpenAI judges: the reliability card, the stabilized judge, rubric-check and migrate" width="900"></p>
+
+```
+mistrial · 32 cases · 3 judges · 5 runs each · 480 verdicts in 76.66s
+
+Consistency (same judge, asked again)
+┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━━┓
+┃ judge               ┃ self-agreement ┃ flipped cases ┃      vs human ┃ errors ┃ reading          ┃
+┡━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━━┩
+│ openai:gpt-5.4-nano │            92% │    5/32 (16%) │  81% (κ 0.63) │      0 │ noticeably flaky │
+│ openai:gpt-5.4-mini │            95% │    4/32 (12%) │  88% (κ 0.75) │      0 │ mostly stable    │
+│ openai:gpt-5.5      │           100% │    0/32 (0%)  │  91% (κ 0.81) │      0 │ stable           │
+└─────────────────────┴────────────────┴───────────────┴───────────────┴────────┴──────────────────┘
+
+Flakiest cases (everyone's verdicts pooled)
+┏━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━┓
+┃ case                  ┃ disagreement ┃ openai:gpt-5.4-nano ┃ openai:gpt-5.4-mini ┃ openai:gpt-5.5 ┃ human ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━┩
+│ arigato               │          40% │ F F F F F           │ F T T T T           │ T T T T T      │ T     │
+│ austen-wrong-year     │          40% │ T F F F T           │ T T T T F           │ F F F F F      │ F     │
+│ largest-country-hedge │          40% │ F F F F F           │ T F F F F           │ T T T T T      │ F     │
+│ moon-miles            │          33% │ F F F F F           │ F F F F F           │ T T T T T      │ T     │
+│ percent-unit          │          33% │ T T T T T           │ F F F F F           │ F F F F F      │ F     │
+└───────────────────────┴──────────────┴─────────────────────┴─────────────────────┴────────────────┴───────┘
+```
+
+What the run says, in order:
+
+- **gpt-5.4-nano flips on 5 of 32 cases** with nothing changed, and agrees with the human label on 81%. gpt-5.5 never flips and agrees on 91%. The judges agree with each other at kappa 0.69 to 0.81, Krippendorff's alpha 0.75.
+- **A CI gate at a 0.5 pass mark on gpt-5.4-mini goes red 90% of the time** with nothing changed, because its score sits in a 0.41 to 0.50 band. On gpt-5.4-nano, 100%. On gpt-5.5, 0%.
+- **Rewording the rubric moves 16% of gpt-5.4-nano's verdicts.** gpt-5.5 moves none. Asked for "incorrect" instead of "correct", gpt-5.4-nano fails to invert on 4 cases.
+- **Switching from gpt-5.4-nano to gpt-5.5 changes 6 verdicts**, and a 0.5 pass mark on the old judge is about 0.62 on the new one.
+- **The fix works and you can see by how much.** gpt-5.4-nano wrapped in a 5-vote majority goes from 92% to 99% self-agreement, and adaptive re-asking got there with 177 fewer calls than asking five times everywhere.
+
+You get the card in the terminal, a single-file `report.html` you can send to anyone, JSON for machines, and markdown for a pull request.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/hemanth1999k/mistrial/main/docs/report.png" alt="mistrial HTML report: three judges, their self-agreement, agreement with each other, and the flakiest cases" width="820">
+</p>
 
 ## What you get
 
@@ -146,7 +151,7 @@ All LLM judges use the same built-in rubric and ask for a JSON verdict. `mistria
 
 ```bash
 # GPT vs Claude vs a local model, five runs each
-mistrial run cases.jsonl --judge openai:gpt-5-mini --judge anthropic:claude-sonnet-5-5 --judge ollama:llama3.2 --runs 5
+mistrial run cases.jsonl --judge openai:gpt-5.4-mini --judge anthropic:claude-sonnet-5-5 --judge ollama:llama3.2 --runs 5
 ```
 
 ### Your own evaluator
@@ -171,11 +176,11 @@ mistrial run cases.jsonl --judge my_evals:correctness --runs 5
 # my_evals.py
 from openevals.llm import create_llm_as_judge
 from openevals.prompts import CORRECTNESS_PROMPT
-judge = create_llm_as_judge(prompt=CORRECTNESS_PROMPT, model="openai:gpt-5-mini")
+judge = create_llm_as_judge(prompt=CORRECTNESS_PROMPT, model="openai:gpt-5.4-mini")
 ```
 
 ```bash
-mistrial run cases.jsonl --judge my_evals:judge --judge openai:gpt-5-mini --runs 5
+mistrial run cases.jsonl --judge my_evals:judge --judge openai:gpt-5.4-mini --runs 5
 ```
 
 Any LangSmith custom evaluator with the same signature works the same way. Export your dataset as JSONL and point at it.
@@ -187,7 +192,7 @@ Any LangSmith custom evaluator with the same signature works the same way. Expor
 ### Drift
 
 ```bash
-mistrial run cases.jsonl --judge openai:gpt-5-mini --runs 5 --fresh
+mistrial run cases.jsonl --judge openai:gpt-5.4-mini --runs 5 --fresh
 mistrial compare .mistrial/runs/20261025-101500.json .mistrial/runs/20261101-093000.json
 ```
 
@@ -196,7 +201,7 @@ Per judge: the cases whose majority verdict changed, and flip rate and accuracy 
 ### CI gate
 
 ```bash
-mistrial run cases.jsonl --judge openai:gpt-5-mini --runs 3 \
+mistrial run cases.jsonl --judge openai:gpt-5.4-mini --runs 3 \
   --min-self-agreement 0.95 --max-flip-rate 0.10 --min-agreement 0.6 --quiet
 ```
 
@@ -212,20 +217,22 @@ No API calls. Re-renders the card from a saved run, as HTML and as the markdown 
 
 ## The probes
 
-Everything below works on the demo judges too, so you can try each one before spending a token: swap `openai:gpt-5-mini` for `demo:flaky`.
+Everything below works on the demo judges too, so you can try each one before spending a token: swap `openai:gpt-5.4-mini` for `demo:flaky`.
 
 ### Gate risk: will my CI gate go red on its own?
 
 ```bash
-mistrial run cases.jsonl --judge openai:gpt-5-mini --runs 5 --pass-mark 0.8
+mistrial run examples/tricky.jsonl --judge openai:gpt-5.4-mini --runs 5 --pass-mark 0.5
 # or on a saved run
-mistrial gate-risk .mistrial/runs/20261025-101500.json --pass-mark 0.8 --runs-in-ci 1 --max-false-alarm 0.05
+mistrial gate-risk .mistrial/runs/20261025-101500.json --pass-mark 0.5 --runs-in-ci 1 --max-false-alarm 0.05
 ```
 
 ```
-Gate risk (pass mark 0.8, 1 run per case in CI)
-┃ judge       ┃ expected score ┃ 90% range ┃ false alarm ┃ safe mark ┃ fix                                 ┃
-│ gpt-5-mini  │           0.84 │ 0.75–0.90 │         22% │      0.75 │ 5 runs per case, or mark ≤ 0.75     │
+Gate risk (pass mark 0.5, 1 run per case in CI)
+┃ judge               ┃ expected score ┃ 90% range ┃ false alarm ┃ safe mark ┃ fix                               ┃
+│ openai:gpt-5.4-nano │           0.38 │ 0.34–0.44 │        100% │      0.34 │ already below the mark on average │
+│ openai:gpt-5.4-mini │           0.46 │ 0.41–0.50 │         90% │      0.41 │ already below the mark on average │
+│ openai:gpt-5.5      │           0.50 │ 0.50–0.50 │          0% │      0.50 │ fine as is                        │
 ```
 
 Each case's observed verdicts are treated as its distribution. The gate score is re-sampled 20,000 times and "false alarm" is how often it lands below your pass mark with nothing changed. The fix column gives the pass mark the judge clears 95% of the time, or the runs-per-case majority vote that gets the alarm rate under 5%. Pure Monte Carlo, so it is right for 10 cases as well as 1,000.
@@ -233,17 +240,19 @@ Each case's observed verdicts are treated as its distribution. The gate score is
 ### Rubric sensitivity and reversal: is the score measuring the wording?
 
 ```bash
-mistrial rubric-check cases.jsonl --judge openai:gpt-5-mini --rubric correctness
+mistrial rubric-check examples/tricky.jsonl --judge openai:gpt-5.4-nano --judge openai:gpt-5.5 --rubric correctness
 ```
 
 ```
 Rubric sensitivity (same meaning, different words)
-┃ judge       ┃ cases ┃ verdicts that changed ┃ alpha across wordings ┃ per wording vs v0   ┃ reading               ┃
-│ gpt-5-mini  │    20 │               5 (25%) │                  0.61 │ v1 15%, v2 20%, v3 10% │ measures the wording │
+┃ judge               ┃ cases ┃ verdicts that changed ┃ alpha across wordings ┃ per wording vs v0      ┃ reading              ┃
+│ openai:gpt-5.4-nano │    32 │               5 (16%) │                  0.81 │ v1 12%, v2 12%, v3 6%  │ measures the wording │
+│ openai:gpt-5.5      │    32 │                0 (0%) │                  1.00 │ v1 0%, v2 0%, v3 0%    │ robust               │
 
 Rubric reversal (ask for INCORRECT instead of correct)
-┃ judge       ┃ cases ┃ verdicts inverted ┃ unchanged ┃ reading                 ┃
-│ gpt-5-mini  │    20 │          17 (85%) │         3 │ mostly reads the rubric │
+┃ judge               ┃ cases ┃ verdicts inverted ┃ unchanged ┃ reading                 ┃
+│ openai:gpt-5.4-nano │    32 │          28 (88%) │         4 │ mostly reads the rubric │
+│ openai:gpt-5.5      │    32 │         32 (100%) │         0 │ reads the rubric        │
 ```
 
 The built-in rubrics ship with three rewordings that mean the same thing and a reversed form. The judge runs under each; `changed` is the share of cases whose verdict depends on which wording you used, and `inverted` is the share that flipped when the criterion flipped. Bring your own wordings with `--variant my_rubric_v2.txt`. Gates: `--max-changed 0.10`, `--min-inversion 0.90`. Function judges have no rubric, so they are skipped.
@@ -251,14 +260,18 @@ The built-in rubrics ship with three rewordings that mean the same thing and a r
 ### Migrate: my judge model is being retired
 
 ```bash
-mistrial run cases.jsonl --judge openai:gpt-4o --judge openai:gpt-5-mini --runs 3
-mistrial migrate .mistrial/runs/20261025-101500.json --pass-mark 0.7
+mistrial run examples/tricky.jsonl --judge openai:gpt-5.4-nano --judge openai:gpt-5.5 --runs 3
+mistrial migrate .mistrial/runs/20261025-101500.json --pass-mark 0.5
 ```
 
 ```
-agree on 80% of cases · kappa 0.55 (moderate) · shift +0.20
-your pass mark 0.7 on openai:gpt-4o is about 0.90 on openai:gpt-5-mini
-4 cases get a different verdict: …
+agree on 81% of cases · kappa 0.62 (substantial) · shift +0.12
+your pass mark 0.5 on openai:gpt-5.4-nano is about 0.62 on openai:gpt-5.5
+6 cases get a different verdict:
+  arigato: F → T
+  moon-miles: F → T
+  percent-unit: T → F
+  …
 ```
 
 Both judges on the same cases, the shift in aggregate score, your pass mark translated so the pass rate stays the same, and the cases that get a different verdict. For 1-to-5 rubrics, `--threshold 4` maps a per-case cutoff by quantile. The translated mark keeps your pass rate. It does not make the judges agree, so read the changed cases.
@@ -267,11 +280,11 @@ Both judges on the same cases, the shift in aggregate score, your pass mark tran
 
 ```bash
 # once: freeze a baseline on a small labeled anchor set that never changes
-mistrial run anchors.jsonl --judge openai:gpt-5-mini --runs 3
+mistrial run anchors.jsonl --judge openai:gpt-5.4-mini --runs 3
 mistrial sentinel baseline .mistrial/runs/20261025-101500.json
 
 # on a schedule (nightly cron, CI): re-judge fresh and compare
-mistrial sentinel check anchors.jsonl --judge openai:gpt-5-mini
+mistrial sentinel check anchors.jsonl --judge openai:gpt-5.4-mini
 ```
 
 Exit 0 `STABLE`, exit 2 `JUDGE_DRIFT` (more than `--max-changed` of anchor verdicts changed, or kappa vs human fell by more than `--max-kappa-drop`), exit 3 if the anchors themselves changed. The anchors never change, so any movement is the judge, which is how you catch a vendor's quiet model update before it blocks a release. Design credit: [judge-drift-sentinel](https://pypi.org/project/judge-drift-sentinel/).
@@ -279,17 +292,17 @@ Exit 0 `STABLE`, exit 2 `JUDGE_DRIFT` (more than `--max-changed` of anchor verdi
 ### Stabilize: the fix, as a judge
 
 ```bash
-mistrial run cases.jsonl --judge openai:gpt-5-mini --runs 5 --stabilize 5
+mistrial run cases.jsonl --judge openai:gpt-5.4-mini --runs 5 --stabilize 5
 ```
 
-Adds `openai:gpt-5-mini×5` next to the raw judge: the same judge asked five times with a majority vote (median for scores). The card shows both, so you see what K buys you before you pay for it. In code:
+Adds `openai:gpt-5.4-mini×5` next to the raw judge: the same judge asked five times with a majority vote (median for scores). The card shows both, so you see what K buys you before you pay for it. In code:
 
 ```python
 from mistrial import stabilize
 
-judge = stabilize("openai:gpt-5-mini", k=5)               # or stabilize(my_evaluator_fn, k=5)
+judge = stabilize("openai:gpt-5.4-mini", k=5)               # or stabilize(my_evaluator_fn, k=5)
 judge(inputs="2+2?", outputs="4", reference_outputs="4")
-# {"key": "openai:gpt-5-mini×5", "score": True, "comment": "...", "mistrial": {"votes": [...], "agreement": 1.0, "k": 5}}
+# {"key": "openai:gpt-5.4-mini×5", "score": True, "comment": "...", "mistrial": {"votes": [...], "agreement": 1.0, "k": 5}}
 ```
 
 Same signature as a LangSmith or openevals evaluator, so it drops in where the flaky one was.
@@ -297,7 +310,7 @@ Same signature as a LangSmith or openevals evaluator, so it drops in where the f
 ### Adaptive re-ask: the same numbers for a third of the calls
 
 ```bash
-mistrial run cases.jsonl --judge openai:gpt-5-mini --runs 7 --adaptive
+mistrial run cases.jsonl --judge openai:gpt-5.4-mini --runs 7 --adaptive
 ```
 
 Every case gets two runs. Only cases where the two disagreed (or a call failed) get the remaining five. Self-agreement is estimated from pairs within each case, so settled cases lose nothing. The card reports the calls skipped.
@@ -327,7 +340,7 @@ jobs:
       - uses: hemanth1999k/mistrial@v0.2.0
         with:
           cases: evals/cases.jsonl
-          judges: "openai:gpt-5-mini my_evals:correctness"
+          judges: "openai:gpt-5.4-mini my_evals:correctness"
           runs: "3"
           adaptive: "true"
           min-self-agreement: "0.95"
