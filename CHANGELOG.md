@@ -4,20 +4,16 @@ All notable changes to mistrial are recorded here. The format follows [Keep a Ch
 
 ## [Unreleased]
 
-### Changed
-- The project is called **mistrial**. Package, command, env vars (`MISTRIAL_BASE_URL`, `MISTRIAL_API_KEY`) and the `.mistrial/` directory all follow. It was briefly called judgeflake before any release.
-- README, demo GIF and report screenshot now show real, current OpenAI judges (`gpt-5.4-nano`, `gpt-5.4-mini`, `gpt-5.5`) instead of the fake `demo` judges. The numbers in the README come from 480 live calls made on 2026-10-25.
-- README opens with the problem, why nothing catches it today, and what mistrial does, with three diagrams in `docs/img/`.
+Nothing yet.
+
+## [0.2.0] - 2026-10-26
+
+First public release. Ten additions over 0.1.0, each answering a documented way LLM judges go wrong in production.
 
 ### Added
 - `examples/tricky.jsonl`: 32 labeled cases built to be hard to judge (hedges, rounding, unit conversions, extra details, equivalent code). The bundled `examples/cases.jsonl` stays as the easy set.
 - `mistrial demo` says up front that its three judges are fake and flaky on purpose.
-
-## [0.2.0] - 2026-10-25
-
-Ten additions, each answering a documented way LLM judges go wrong in production.
-
-### Added
+- `docs/img/compare.png`, a feature comparison against judgecheck, judgebench, Assay, judge-drift-sentinel and LangSmith/promptfoo, and a "Standing on shoulders" README section with the papers and repos this builds on.
 - **Rubric sensitivity** (`mistrial rubric-check`): run the judge under three rewordings of the rubric that mean the same thing, report the share of verdicts that change and Krippendorff's alpha across wordings. Built-in rewordings for `correctness` and `quality`; bring your own with `--variant`.
 - **Rubric reversal** (same command): ask with the criterion flipped and check that verdicts invert. Reports the cases where the judge gave the same answer to "is it correct?" and "is it incorrect?".
 - **Gate false-alarm rate** (`--pass-mark` on `run`/`report`, and `mistrial gate-risk`): how often your CI gate would go red with nothing changed, by re-sampling each case's observed verdicts; plus a safe mark and the runs per case that bring the rate under 5%.
@@ -31,11 +27,14 @@ Ten additions, each answering a documented way LLM judges go wrong in production
 - Judges for every OpenAI-compatible provider: `gemini:`, `groq:`, `mistral:`, `deepseek:`, `xai:`, `together:`, `openrouter:`, `ollama:` (local, no key) and `custom:` with `MISTRIAL_BASE_URL`. `<PROVIDER>_BASE_URL` overrides any base URL. `mistrial providers` lists them.
 
 ### Changed
+- The project is called **mistrial**. Package, command, env vars (`MISTRIAL_BASE_URL`, `MISTRIAL_API_KEY`) and the `.mistrial/` directory all follow. It was briefly called judgeflake before any release.
+- README, demo GIF and report screenshot now show real, current OpenAI judges (`gpt-5.4-nano`, `gpt-5.4-mini`, `gpt-5.5`) instead of the fake `demo` judges. The numbers in the README come from 480 live calls made on 2026-10-25.
+- README opens with the problem, why nothing catches it today, and what mistrial does, with three diagrams in `docs/img/`.
 - Saved runs are format version 2 (adds `adaptive`, `calls_saved`, and `text`/`parse` per verdict). Version 1 files still load.
 
 ## [0.1.0] - 2026-10-25
 
-First release.
+First tagged version, never published.
 
 ### Added
 - `mistrial run`: run one or more judges over a cases file N times and print the reliability card.

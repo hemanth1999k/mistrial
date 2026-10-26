@@ -1,5 +1,5 @@
 <p align="center">
-  <h1 align="center">mistrial</h1>
+  <h1 align="center">Mistrial</h1>
   <p align="center"><strong>Is your LLM judge flaky?</strong><br>
   Re-run any evaluator across runs, judge models and rubric wordings, and get a reliability card.<br>
   When the verdict can't be trusted, declare a mistrial.</p>
@@ -38,7 +38,7 @@ The research agrees. The same judge gives different scores to the same answer ac
 
 **Before "how good is my model?" you need "can I trust the number that told me?"**
 
-## What mistrial does
+## What Mistrial does
 
 <p align="center"><img src="https://raw.githubusercontent.com/hemanth1999k/mistrial/main/docs/img/how.png" alt="You bring cases, any judge and a rubric. mistrial re-asks across runs, judges and rubric wordings. You get a reliability card, a verdict on the judge, and a stabilized judge as the fix." width="1000"></p>
 
@@ -375,27 +375,45 @@ Known limits: kappa on a handful of cases is not evidence, and a judge that is p
 
 ## How is this different
 
-Other people have looked at this problem, and some of their tools go deeper than mistrial on statistics. The short version:
+Other people have looked at this problem, and some of their tools go deeper than Mistrial on statistics. judgecheck is the one to use when you need confidence intervals and bias probes for a paper or audit. judgebench owns position bias. Assay is a full regression framework. Mistrial is the one to run against the evaluator you already have, in a minute, and put in CI.
 
-| | mistrial | judgecheck | judgebench | Assay rejudge | LangSmith repetitions |
-|---|---|---|---|---|---|
-| calls the judge for you, N times | yes, adaptive | no, you bring ratings | 2 runs, A/B swap | yes | yes |
-| self-agreement and flipped cases | yes | from your file | no | yes | mean and std dev only |
-| agreement between judges (kappa, alpha) | yes | yes, with confidence intervals | judge vs human | vs saved verdicts | no |
-| position and verbosity bias probes | no | yes | yes | no | no |
-| rubric sensitivity and reversal | yes | no | no | no | no |
-| gate false-alarm rate | yes | no | no | no | no |
-| judge migration with threshold translation | yes | no | no | partly | no |
-| sentinel on anchor cases | yes | no | no | no | no |
-| parser audit | yes | no | no | partly | no |
-| stabilized evaluator (k-vote, same signature) | yes | no | no | no | no |
-| escalation list for humans | yes | no | no | no | annotation queues exist |
-| drift between saved runs | yes | no | no | no | UI compare |
-| CI gate, GitHub Action with PR comment | yes | no | no | yes | no |
-| takes your existing evaluator function | yes | no | no | yes | its own |
-| try with no key | 10 s demo | ~30 s | no | no | no |
+<p align="center"><img src="https://raw.githubusercontent.com/hemanth1999k/mistrial/main/docs/img/compare.png" alt="Feature comparison: Mistrial, judgecheck, judgebench, Assay rejudge, judge-drift-sentinel, LangSmith/promptfoo, across measuring the judge, protecting the pipeline, fixing it, and getting started." width="1000"></p>
 
-The full table, with what each of them does better, is in [docs/COMPARISON.md](docs/COMPARISON.md). judgecheck is the one to use when you need confidence intervals and bias probes for a paper or audit. mistrial is the one to run against the evaluator you already have, in a minute, and put in CI.
+The full table, with links and what each of them does better, is in [docs/COMPARISON.md](docs/COMPARISON.md). If a cell is wrong, open an issue and it gets fixed.
+
+## Standing on shoulders
+
+Mistrial puts century-old reliability statistics in front of a new kind of rater. None of the ideas are new; the packaging is. People and projects worth following if you work on this:
+
+**Papers to read**
+
+- [Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena](https://arxiv.org/abs/2306.05685), Zheng et al., 2023. The paper that named the practice and first measured judge agreement with humans, and the position, verbosity and self-enhancement biases that come with it.
+- [Large Language Models are not Fair Evaluators](https://arxiv.org/abs/2305.17926), Wang et al., 2023. Swap the order of two answers and the verdict changes. Position bias is on Mistrial's roadmap because of this paper.
+- [Large Language Models are Inconsistent and Biased Evaluators](https://arxiv.org/abs/2405.01724), Stureborg et al., 2024. Run-to-run inconsistency of the same judge, measured. This is the problem the card's self-agreement column reports.
+- [Rating Roulette: Self-Consistency and Variance of LLM-as-a-Judge](https://aclanthology.org/2025.findings-emnlp.1361.pdf), EMNLP 2025 Findings. The same judge gives different scores to the same answer across runs; the paper that made "ask again" a method.
+- [Reliability without Validity](https://arxiv.org/abs/2606.19544), 2026. Raw percent agreement overstates judge reliability by 30 to 40 points against chance-corrected kappa, across 21 judges. Why the card reports kappa and alpha, not just agreement.
+- [Replacing Judges with Juries](https://arxiv.org/abs/2404.18796), Verga et al. (Cohere), 2024. A panel of smaller, diverse judges beats one large judge and costs less. The jury mode planned for v0.3 starts here.
+- [Who Validates the Validators?](https://arxiv.org/abs/2404.12272), Shankar et al., 2024. EvalGen: humans and LLM evaluators drift apart unless the rubric is aligned with human judgment case by case. The reason `escalate` exists.
+- [G-Eval](https://arxiv.org/abs/2303.16634), Liu et al., 2023, and [Prometheus 2](https://arxiv.org/abs/2405.01535), Kim et al., 2024. Two ways to make a judge: prompt a frontier model with a rubric, or train an open model to be one. Mistrial measures either.
+- [Judging the Judges](https://arxiv.org/abs/2406.12624), Thakur et al., 2024, and [Justice or Prejudice?](https://arxiv.org/abs/2410.02736), Ye et al., 2024. Systematic audits of judge alignment and of twelve bias types. Good checklists for probes Mistrial does not have yet.
+- [Agent-as-a-Judge](https://arxiv.org/abs/2410.10934), Zhuge et al., 2024. Judging multi-step agent trajectories, where reliability is worst and least measured.
+- [A Survey on LLM-as-a-Judge](https://arxiv.org/abs/2411.15594), Gu et al., 2024. The map of the field.
+- Classics: [Cohen's kappa](https://en.wikipedia.org/wiki/Cohen%27s_kappa) (1960), [Krippendorff's alpha](https://en.wikipedia.org/wiki/Krippendorff%27s_alpha), and the [Landis and Koch](https://en.wikipedia.org/wiki/Cohen%27s_kappa#Interpreting_magnitude) bands the card uses as readings. Every field with human raters has used these for decades.
+
+**Repos to check out**
+
+- [judgecheck](https://github.com/adhammomen/judgecheck): the serious statistics package for judge ratings, with confidence intervals, five bias probes and calibration. Bring your ratings file.
+- [judgebench](https://github.com/fakkad/judgebench): position-bias testing by running every pair in both orders.
+- [judge-drift-sentinel](https://pypi.org/project/judge-drift-sentinel/): a frozen human-labeled anchor set and a baseline, so you can tell whether the judge or your system moved. Mistrial's `sentinel` borrows this design, with credit.
+- [judgekeeper](https://github.com/judgekeeper/judgekeeper): get human labels in the first place, in a browser, then measure the judge against them.
+- [Assay](https://github.com/tap222/assay-evals): behavioral regression testing for AI apps with a pytest plugin, PR comments, and a `rejudge` command.
+- [verdict](https://github.com/haizelabs/verdict) (Haize Labs): a framework for building compound judges with repeat-and-vote, debate and verification. Builds the judge that Mistrial then measures.
+- [llm-council](https://github.com/karpathy/llm-council) (Andrej Karpathy): several models answer, review each other anonymously, and a chairman synthesizes. The council idea applied to answering; Mistrial's planned jury mode applies it to judging.
+- [openevals](https://github.com/langchain-ai/openevals) and [LangSmith](https://docs.langchain.com/langsmith/evaluation): ready-made evaluators and the evaluator signature Mistrial speaks. Point `--judge module:function` at any of them.
+- [autoevals](https://github.com/braintrustdata/autoevals) (Braintrust), [DeepEval](https://github.com/confident-ai/deepeval), [Ragas](https://github.com/explodinggradients/ragas), [promptfoo](https://github.com/promptfoo/promptfoo), [Phoenix](https://github.com/Arize-ai/phoenix): the eval frameworks most judges live in. Wrap their scorers as a function and Mistrial will re-run them.
+- [Inspect](https://github.com/UKGovernmentBEIS/inspect_ai) (UK AI Security Institute), [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness), [AlpacaEval](https://github.com/tatsu-lab/alpaca_eval), [FastChat](https://github.com/lm-sys/FastChat) (MT-Bench): the benchmark harnesses where model-graded evaluation grew up.
+
+If your project belongs here and is missing, open a PR with one line.
 
 ## Roadmap
 
