@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mistrial"
-version = "0.2.0"
+version = "0.2.1"
 description = "Is your LLM judge flaky? Re-run any evaluator across runs and judge models and get a reliability card: flip rate, agreement, drift, and the cases that flip."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -41,6 +41,9 @@ Changelog = "https://github.com/hemanth1999k/mistrial/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mistrial"]
+
+[tool.hatch.build.targets.sdist]
+only-include = ["src", "tests", "examples", "README.md", "CHANGELOG.md", "LICENSE", "pyproject.toml"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

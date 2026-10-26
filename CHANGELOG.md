@@ -6,6 +6,11 @@ All notable changes to mistrial are recorded here. The format follows [Keep a Ch
 
 Nothing yet.
 
+## [0.2.1] - 2026-10-26
+
+### Changed
+- The source distribution contains only the package, tests, examples and the top-level docs. The wheel is unchanged.
+
 ## [0.2.0] - 2026-10-26
 
 First public release. Ten additions over 0.1.0, each answering a documented way LLM judges go wrong in production.
@@ -50,6 +55,7 @@ First tagged version, never published.
 - `mistrial demo`: three fake judges on twenty bundled cases, no API key.
 - `mistrial report` to re-render a saved run and `mistrial rubrics` to list rubrics.
 
-[Unreleased]: https://github.com/hemanth1999k/mistrial/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/hemanth1999k/mistrial/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/hemanth1999k/mistrial/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/hemanth1999k/mistrial/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/hemanth1999k/mistrial/releases/tag/v0.1.0
