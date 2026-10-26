@@ -2,7 +2,7 @@
 
 Checked 2026-10-25 against each project's README, design doc or docs page. If something here is wrong or out of date, open an issue and it gets fixed.
 
-Projects: [judgecheck](https://github.com/adhammomen/judgecheck), [judgebench](https://github.com/fakkad/judgebench), [judgekeeper](https://github.com/judgekeeper/judgekeeper), [Assay](https://github.com/tap222/assay-evals) (`assay rejudge`), [LangSmith repetitions](https://docs.langchain.com/langsmith/repetition), [promptfoo `repeat`](https://www.promptfoo.dev/docs/configuration/reference).
+Projects: [judgecheck](https://github.com/adhammomen/judgecheck) (by adhammomen; a different, older project with the same name by theruviparambil is covered under "Other close projects"), [judgebench](https://github.com/fakkad/judgebench), [judgekeeper](https://github.com/judgekeeper/judgekeeper), [Assay](https://github.com/tap222/assay-evals) (`assay rejudge`), [LangSmith repetitions](https://docs.langchain.com/langsmith/repetition), [promptfoo `repeat`](https://www.promptfoo.dev/docs/configuration/reference).
 
 ## Feature by feature
 
@@ -25,7 +25,7 @@ Projects: [judgecheck](https://github.com/adhammomen/judgecheck), [judgebench](h
 | Report | terminal, single-file HTML, JSON | markdown, JSON | HTML dashboard | browser page | pytest report, PR comment | hosted UI |
 | Dependencies | typer, rich, httpx | numpy, matplotlib | – | – | pytest | SaaS / node |
 | Try without an API key | `pipx run mistrial demo`, 10 s | clone and install, ~30 s | no | yes, on existing results | no | no |
-| On PyPI | pending | yes | no | yes | yes | n/a |
+| On PyPI | yes | no (the `judgecheck` on PyPI is the other project of that name, see below) | no | yes | yes | n/a |
 | Activity (stars, last push) | new | 0, created 2026-10-25 | 0, dormant since 2026-02 | 0, 2026-10 | 23, active | large |
 
 ## What the others have that mistrial does not
@@ -72,6 +72,8 @@ Checked 2026-10-25 against the same READMEs plus judge-drift-sentinel, haizelabs
 Ten of eleven are now in mistrial 0.2.0. The eleventh (transitivity) waits for a pairwise mode.
 
 ## Other close projects
+
+- [judgecheck by theruviparambil](https://github.com/theruviparambil/judgecheck): the `judgecheck` that is on PyPI, and a different project from the one in the table. Panel reliability from rating files: Fleiss' kappa, Krippendorff's alpha, pairwise Cohen's kappa, recall and precision per rater against adjudicated truth, how many effective independent judges a panel has (Kish design effect), coincident-error detection with a permutation p-value, rater triage (keep, review, drop), bootstrap intervals, and `--fail-under` CI gates. No model calls. Created 2026-08, last push 2026-09. If you run a multi-model panel and want to know whether the judges are really independent, use it.
 
 - [judge-drift-sentinel](https://pypi.org/project/judge-drift-sentinel/): frozen human-labeled anchor set, tells you whether the judge or the system moved, exit codes. v0.1.0, PyPI upload pending.
 - [verdict](https://github.com/haizelabs/verdict) (haizelabs): framework for compound judges with repeat and vote. 349 stars, last push 2025-11. Builds judges rather than measuring them.

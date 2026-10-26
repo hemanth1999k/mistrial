@@ -402,7 +402,8 @@ Mistrial puts century-old reliability statistics in front of a new kind of rater
 
 **Repos to check out**
 
-- [judgecheck](https://github.com/adhammomen/judgecheck): the serious statistics package for judge ratings, with confidence intervals, five bias probes and calibration. Bring your ratings file.
+- [judgecheck](https://github.com/adhammomen/judgecheck) (adhammomen): the serious statistics package for judge ratings, with confidence intervals, five bias probes and calibration. Bring your ratings file.
+- [judgecheck](https://github.com/theruviparambil/judgecheck) (theruviparambil, the one on PyPI): a different project with the same name. Panel reliability from rating files: Fleiss' kappa, how many effective independent judges you really have, coincident errors between raters, and a keep/review/drop triage per rater.
 - [judgebench](https://github.com/fakkad/judgebench): position-bias testing by running every pair in both orders.
 - [judge-drift-sentinel](https://pypi.org/project/judge-drift-sentinel/): a frozen human-labeled anchor set and a baseline, so you can tell whether the judge or your system moved. Mistrial's `sentinel` borrows this design, with credit.
 - [judgekeeper](https://github.com/judgekeeper/judgekeeper): get human labels in the first place, in a browser, then measure the judge against them.
