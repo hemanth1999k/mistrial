@@ -20,14 +20,9 @@ mistrial run cases.jsonl -j openai:gpt-5.4-mini -j openai:gpt-5.5 --runs 5
 
 No key? `pipx run mistrial demo` runs three fake judges that are built to be flaky on purpose.
 
+**The 90 second version.** Every number in it is from the runs below.
 
 https://github.com/user-attachments/assets/3ff4653d-6fcd-4848-993f-df576a8c8044
-
-
-<p align="center">
-  <a href="https://github.com/hemanth1999k/mistrial/releases/download/v0.2.1/explainer.mp4"><img src="https://raw.githubusercontent.com/hemanth1999k/mistrial/main/docs/explainer-poster.png" alt="Watch the 90 second explainer: the problem, why it slips through, one command, the real numbers, the fix" width="820"></a><br>
-  <sub>90 second explainer. Every number in it is from the runs below.</sub>
-</p>
 
 ## The problem
 
