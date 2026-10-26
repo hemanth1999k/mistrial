@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>mistrial explainer</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+:root{--bg:#fbfaf7;--ink:#1b1a17;--soft:#5f5b53;--line:#e4e0d6;--card:#ffffff;--ok:#2f7d4f;--warn:#b7791f;--bad:#b3362b;--acc:#c8421f;--okbg:#e4f1e8;--badbg:#f6e2de;--mono:'JetBrains Mono',ui-monospace,Menlo,monospace;--ease:cubic-bezier(.2,.7,.2,1)}
+*{box-sizing:border-box}
+html,body{margin:0;background:#000}
+body{color:var(--ink);font:28px/1.4 Inter,-apple-system,Segoe UI,sans-serif;-webkit-font-smoothing:antialiased}
+#stage{position:relative;width:1920px;height:1080px;overflow:hidden;background:var(--bg)}
+#stage:before{content:"";position:absolute;inset:0;background:
+ radial-gradient(1200px 600px at 85% -10%, rgba(200,66,31,.06), transparent 60%),
+ radial-gradient(900px 500px at -10% 110%, rgba(47,125,79,.06), transparent 60%)}
+section{position:absolute;inset:0;padding:150px 112px 100px}
+.brand{position:absolute;left:112px;top:58px;display:flex;align-items:center;gap:14px;font-weight:600;font-size:26px;letter-spacing:-.01em}
+.brand i{width:16px;height:16px;border-radius:4px;background:var(--acc)}
+.chapter{position:absolute;right:112px;top:62px;font:500 20px var(--mono);color:var(--soft);letter-spacing:.02em}
+.timeline{position:absolute;left:0;bottom:0;height:5px;background:var(--acc);width:var(--w)}
+h1{margin:0 0 18px;font-size:60px;line-height:1.12;font-weight:600;letter-spacing:-.025em;max-width:1500px}
+h1 em{font-style:normal;color:var(--acc)}
+.lead{font-size:30px;color:var(--soft);max-width:1400px;margin:0}
+.cap{position:absolute;left:112px;right:112px;bottom:118px;font-size:34px;line-height:1.3;max-width:1500px}
+.cap b{font-weight:600}
+.cap.acc b{color:var(--acc)}
+.mono{font-family:var(--mono)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:30px 34px;box-shadow:0 1px 0 rgba(0,0,0,.02),0 12px 40px -24px rgba(27,26,23,.25)}
+.k{font-size:17px;letter-spacing:.08em;text-transform:uppercase;color:var(--soft);font-weight:600}
+.chip{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:12px;font:600 24px var(--mono);margin-right:10px}
+.chip.t{background:var(--okbg);color:var(--ok)}
+.chip.f{background:var(--badbg);color:var(--bad)}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.acc{color:var(--acc)}.soft{color:var(--soft)}.warn{color:var(--warn)}
+
+/* title */
+.title{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding-top:0}
+.wordmark{display:flex;align-items:center;gap:26px;font-size:120px;font-weight:600;letter-spacing:-.04em;line-height:1}
+.wordmark i{width:44px;height:44px;border-radius:10px;background:var(--acc)}
+.tag{font-size:60px;font-weight:600;letter-spacing:-.025em;margin:40px 0 18px}
+.sub{font-size:32px;color:var(--soft)}
+
+/* pipeline */
+.pipe{display:flex;align-items:center;gap:20px;margin-top:70px}
+.node{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px 30px;min-width:270px;height:190px;display:flex;flex-direction:column;justify-content:center;gap:10px}
+.node .k{margin-bottom:2px}
+.node .v{font-size:30px;font-weight:600;letter-spacing:-.01em}
+.node .v.big{font-size:64px;letter-spacing:-.03em}
+.arrow{font-size:40px;color:var(--line);line-height:1}
+.spark{display:flex;align-items:flex-end;gap:7px;height:64px}
+.spark i{width:16px;background:#e3dfd5;border-radius:4px}
+.spark i.a{background:var(--ok)}
+
+/* case card */
+.case{font:24px/1.5 var(--mono);background:#f4f1ea;border:1px solid var(--line);border-radius:14px;padding:22px 26px;color:var(--ink)}
+.case b{font-weight:600}
+.case .ref{color:var(--soft)}
+.row{display:flex;align-items:center;gap:16px;margin-top:22px}
+.row .lbl{width:230px;flex:none;font:500 24px var(--mono)}
+.row .hum{margin-left:auto;font:500 22px var(--mono);color:var(--soft);white-space:nowrap}
+.quote{font-size:26px;line-height:1.45;color:var(--soft);border-left:4px solid var(--line);padding:4px 0 4px 22px;margin-top:22px}
+.quote b{color:var(--ink);font-weight:600;font-family:var(--mono);font-size:22px;margin-right:10px}
+.two{display:grid;grid-template-columns:1.05fr 1fr;gap:60px;margin-top:40px;align-items:start}
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px;margin-top:48px}
+.col h2{margin:0 0 6px;font-size:30px;font-weight:600;letter-spacing:-.015em}
+.col p{margin:0 0 20px;color:var(--soft);font-size:22px;line-height:1.4;min-height:62px}
+.col .case{font-size:20px;padding:18px 22px}
+.col .row{margin-top:14px}
+.col .row .lbl{width:160px;font-size:20px}
+.col .chip{width:40px;height:40px;font-size:19px;margin-right:6px}
+.col .hum{font-size:19px}
+.col .note{margin-top:18px;font-size:21px;line-height:1.4;color:var(--ink)}
+.col .note b{font-weight:600}
+
+/* list */
+.list{margin-top:50px;display:flex;flex-direction:column;gap:34px}
+.item{display:flex;gap:28px;align-items:flex-start;font-size:34px;line-height:1.3;max-width:1500px}
+.item .n{flex:none;width:58px;height:58px;border-radius:14px;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font:600 22px var(--mono);color:var(--soft);margin-top:2px}
+.item b{font-weight:600}
+.punch{font-size:50px;line-height:1.2;font-weight:600;letter-spacing:-.02em;max-width:1600px;margin-top:70px}
+.punch em{font-style:normal;color:var(--acc)}
+
+/* terminal */
+.term{margin-top:36px;background:#1e1e2e;color:#cdd6f4;border-radius:18px;box-shadow:0 30px 80px -30px rgba(27,26,23,.5);overflow:hidden;width:1696px;height:470px}
+.term .bar{height:52px;display:flex;align-items:center;gap:10px;padding:0 20px;background:#181825;border-bottom:1px solid #11111b}
+.term .bar i{width:14px;height:14px;border-radius:50%;background:#45475a}
+.term .bar i:nth-child(1){background:#f38ba8}.term .bar i:nth-child(2){background:#f9e2af}.term .bar i:nth-child(3){background:#a6e3a1}
+.term .body{padding:22px 32px;font:22px/1.5 var(--mono)}
+.prompt{color:#a6e3a1}
+.cur{display:inline-block;width:12px;height:26px;background:#cdd6f4;vertical-align:-4px;margin-left:2px;animation:blink 1s steps(1) infinite}
+.prog{display:flex;align-items:center;gap:18px;margin-top:14px;color:#a6adc8}
+.prog .track{width:520px;height:12px;background:#313244;border-radius:6px;overflow:hidden}
+.prog .track i{display:block;height:100%;background:#cba6f7;border-radius:6px;width:var(--w)}
+.ttab{margin-top:22px;border-collapse:separate;border-spacing:0;font-size:22px}
+.ttab th{text-align:left;color:#f5c2e7;font-weight:600;padding:6px 36px 10px 0;border-bottom:1px solid #45475a}
+.ttab td{padding:9px 36px 9px 0;border-bottom:1px solid #313244;white-space:nowrap}
+.ttab td.r{text-align:right}
+.ttab .g{color:#a6e3a1}.ttab .y{color:#f9e2af}.ttab .r2{color:#f38ba8}
+.ttab .j{color:#89b4fa}
+
+/* results */
+.res{display:grid;grid-template-columns:1.3fr 1fr;gap:48px;margin-top:40px}
+table.bars{border-collapse:collapse;width:100%;table-layout:fixed}
+table.bars th:nth-child(1){width:250px}
+table.bars th:nth-child(2),table.bars th:nth-child(3){width:auto}
+table.bars th{text-align:left;font-size:17px;letter-spacing:.08em;text-transform:uppercase;color:var(--soft);font-weight:600;padding:0 0 14px;border-bottom:1px solid var(--line)}
+table.bars td{padding:22px 26px 22px 0;border-bottom:1px solid var(--line);vertical-align:middle;white-space:nowrap}
+table.bars td.j{font:500 24px var(--mono)}
+table.bars td.j .read{display:block;font:600 19px Inter,sans-serif;margin-top:4px;width:auto}
+.bar2{position:relative;height:20px;background:#eeebe3;border-radius:10px;overflow:hidden;flex:1}
+.bar2 i{position:absolute;left:0;top:0;bottom:0;border-radius:10px;width:var(--w)}
+.bar2.g i{background:var(--ok)}.bar2.r i{background:var(--acc)}
+.pair{display:flex;align-items:center;gap:16px;width:100%}
+.num{font:600 26px var(--mono);width:92px;flex:none;text-align:right}
+.read{font-size:22px;width:230px}
+.read.bad{color:var(--bad);font-weight:600}.read.warn{color:var(--warn);font-weight:600}.read.ok{color:var(--ok);font-weight:600}
+.legend{display:flex;gap:30px;margin:0 0 18px;font-size:21px;color:var(--soft)}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:4px;margin-right:9px;vertical-align:-1px}
+.side{display:flex;flex-direction:column;gap:18px}
+.stat{padding:24px 30px}
+.stat .k{margin-bottom:8px}
+.stat .big{font-size:58px;font-weight:600;letter-spacing:-.03em;line-height:1;margin-bottom:8px;font-family:var(--mono)}
+.stat .d{font-size:22px;line-height:1.4;color:var(--soft)}
+.stat .d b{color:var(--ink);font-weight:600}
+
+/* fix */
+.fix{margin-top:44px;display:grid;grid-template-columns:1.15fr 1fr;gap:54px;align-items:start}
+.fixrow{display:flex;align-items:center;gap:22px;margin-top:26px}
+.fixrow .lbl{width:360px;flex:none;font:500 24px var(--mono)}
+.fixrow .lbl small{display:block;font:400 19px Inter,sans-serif;color:var(--soft);margin-top:4px}
+.fixrow .bar2{height:30px;border-radius:15px}
+.fixrow .num{font-size:34px;width:120px}
+.code{margin-top:36px;background:#1e1e2e;color:#cdd6f4;border-radius:14px;padding:24px 28px;font:22px/1.6 var(--mono)}
+.code .c{color:#6c7086}.code .f{color:#89b4fa}.code .s{color:#a6e3a1}.code .n{color:#fab387}
+.mini{padding:22px 28px}
+.mini .k{margin-bottom:6px}
+.mini .t{font-size:26px;font-weight:600;letter-spacing:-.01em;margin-bottom:4px}
+.mini .d{font-size:21px;color:var(--soft);line-height:1.4}
+
+/* cta */
+.cta{display:flex;flex-direction:column;justify-content:center;padding-top:0}
+.cmd{font:500 44px var(--mono);background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px 36px;display:inline-flex;align-items:center;gap:18px;width:max-content}
+.cmd .p{color:var(--soft)}
+.cmd .cur{background:var(--ink);height:44px;width:18px}
+.alt{font-size:30px;color:var(--soft);margin-top:30px}
+.alt code{font-family:var(--mono);color:var(--ink);font-size:28px}
+.links{font:500 28px var(--mono);color:var(--soft);margin-top:60px}
+.links b{color:var(--ink);font-weight:600}
+.close{font-size:38px;margin-top:40px;letter-spacing:-.01em}
+.close b{font-weight:600;color:var(--acc)}
+
+@keyframes up{from{opacity:0;transform:translateY(34px)}to{opacity:1;transform:none}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes pop{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:none}}
+@keyframes left{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:none}}
+@keyframes out{from{opacity:1;transform:none}to{opacity:0;transform:translateY(-18px)}}
+@keyframes grow{from{width:0}to{width:var(--w)}}
+@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+</style></head>
+<body><div id="stage">
+
+<div class="brand" data-in="6.2" data-fx="fade" data-out="80.6"><i></i>mistrial</div>
+<div class="timeline" data-in="0" data-fx="fade" data-grow="100" data-dur="88"></div>
+
+<!-- 0. title -->
+<section class="title" data-out="5.4">
+  <div class="wordmark" data-in="0.2" data-fx="up" data-dur="1"><i></i>mistrial</div>
+  <div class="tag" data-in="1.3">Is your LLM judge <span class="acc">flaky?</span></div>
+  <div class="sub" data-in="2.5">Re-run the evaluator you already use. Get a reliability card. Then fix it.</div>
+</section>
+
+<!-- 1. you ship on a score -->
+<div class="chapter" data-in="6.2" data-fx="fade" data-out="14.6">01 · the problem</div>
+<section data-out="14.6">
+  <h1 data-in="6.4">You ship AI features on a <em>score</em> from an LLM judge.</h1>
+  <p class="lead" data-in="7.1">A model reads your model's answers and says pass or fail. The score goes everywhere.</p>
+  <div class="pipe">
+    <div class="node" data-in="7.9" data-fx="pop"><div class="k">your cases</div><div class="v">320 answers</div><div class="soft" style="font-size:22px">prompts, outputs, references</div></div>
+    <div class="arrow" data-in="8.3" data-fx="fade">→</div>
+    <div class="node" data-in="8.6" data-fx="pop"><div class="k">LLM judge</div><div class="v mono" style="font-size:18px;letter-spacing:0">openai:gpt-5.4-mini</div><div class="soft" style="font-size:22px">"is the output correct?"</div></div>
+    <div class="arrow" data-in="9.0" data-fx="fade">→</div>
+    <div class="node" data-in="9.3" data-fx="pop" style="align-items:center;text-align:center"><div class="k">the score</div><div class="v big mono">0.81</div></div>
+    <div class="arrow" data-in="9.7" data-fx="fade">→</div>
+    <div class="node" data-in="10.0" data-fx="pop"><div class="k">CI gate · 0.8</div><div class="v ok">✓ pass, ship it</div><div class="soft" style="font-size:22px">prompt B beats prompt A</div></div>
+    <div class="arrow" data-in="10.4" data-fx="fade">→</div>
+    <div class="node" data-in="10.7" data-fx="pop"><div class="k">dashboard</div><div class="spark"><i style="height:30%"></i><i style="height:42%"></i><i style="height:38%"></i><i style="height:55%"></i><i style="height:60%"></i><i style="height:52%"></i><i style="height:70%"></i><i class="a" style="height:81%"></i></div></div>
+  </div>
+  <div class="cap" data-in="12.0">It gates the build, picks the winning prompt, and goes on the dashboard. <b>It looks like a fact.</b></div>
+</section>
+
+<!-- 2. ask it again -->
+<section data-out="27.6">
+  <h1 data-in="15.3">Ask the judge again. <em>Nothing changed.</em></h1>
+  <p class="lead" data-in="15.9">Not the prompt, not the case, not the model. Real replies from gpt-5.4-nano, 25 October 2026.</p>
+  <div class="two">
+    <div>
+      <div class="case" data-in="16.6" data-fx="pop"><b>austen-wrong-year</b><br>Q: Who wrote Pride and Prejudice?<br>A: Jane Austen, published in 1811.<br><span class="ref">reference: Jane Austen &nbsp;(it was 1813)</span></div>
+      <div class="row"><span class="lbl" data-in="17.4" data-fx="fade">gpt-5.4-nano</span>
+        <span class="chip t" data-in="17.7" data-fx="pop" data-dur=".4">T</span><span class="chip f" data-in="18.3" data-fx="pop" data-dur=".4">F</span><span class="chip f" data-in="18.9" data-fx="pop" data-dur=".4">F</span><span class="chip f" data-in="19.5" data-fx="pop" data-dur=".4">F</span><span class="chip t" data-in="20.1" data-fx="pop" data-dur=".4">T</span>
+        <span class="hum" data-in="20.6" data-fx="fade">human: F</span></div>
+    </div>
+    <div>
+      <div class="quote" data-in="21.0"><b>run 1</b>"the added mention of 1811 does not contradict the core requirement" → <span class="ok" style="font-weight:600">correct</span></div>
+      <div class="quote" data-in="22.8"><b>run 2</b>"1811 is not part of the reference, so the answer is incorrect" → <span class="bad" style="font-weight:600">incorrect</span></div>
+    </div>
+  </div>
+  <div class="cap acc" data-in="24.8">Same model. Same case. Opposite reasoning. <b>Which run did your dashboard get?</b></div>
+</section>
+
+<!-- 3. three directions -->
+<section data-out="39.6">
+  <h1 data-in="28.3">The verdict moves in <em>three directions.</em></h1>
+  <div class="three">
+    <div class="col card" data-in="29.4" data-fx="up">
+      <h2>Same judge, asked again</h2>
+      <p>Five runs, nothing changed between them.</p>
+      <div class="case"><b>austen-wrong-year</b><br>A: Jane Austen, published in 1811.</div>
+      <div class="row"><span class="lbl">gpt-5.4-nano</span><span class="chip t">T</span><span class="chip f">F</span><span class="chip f">F</span><span class="chip f">F</span><span class="chip t">T</span></div>
+      <div class="row"><span class="lbl">gpt-5.4-mini</span><span class="chip t">T</span><span class="chip t">T</span><span class="chip t">T</span><span class="chip t">T</span><span class="chip f">F</span><span class="hum">human: F</span></div>
+      <div class="note"><b>5 of 32 cases</b> flip on gpt-5.4-nano across five runs.</div>
+    </div>
+    <div class="col card" data-in="30.6" data-fx="up">
+      <h2>Different judge, same rubric</h2>
+      <p>Three models, identical instructions and reference.</p>
+      <div class="case"><b>moon-miles</b><br>A: About 239,000 miles. &nbsp;<span class="ref">ref: 384,400 km</span></div>
+      <div class="row"><span class="lbl">gpt-5.4-nano</span><span class="chip f">F</span><span class="chip f">F</span><span class="chip f">F</span><span class="chip f">F</span><span class="chip f">F</span></div>
+      <div class="row"><span class="lbl">gpt-5.5</span><span class="chip t">T</span><span class="chip t">T</span><span class="chip t">T</span><span class="chip t">T</span><span class="chip t">T</span><span class="hum">human: T</span></div>
+      <div class="note">Two judges fail a correct answer for being in miles. <b>Each one is "stable" on its own.</b></div>
+    </div>
+    <div class="col card" data-in="31.8" data-fx="up">
+      <h2>Same meaning, different words</h2>
+      <p>The rubric reworded three ways that mean the same thing.</p>
+      <div class="case"><b>reverse-string</b><br>A: ''.join(reversed(s)) &nbsp;<span class="ref">ref: s[::-1]</span></div>
+      <div class="row"><span class="lbl">wording v0</span><span class="chip f">F</span><span class="hum">human: T</span></div>
+      <div class="row"><span class="lbl">v1 · v2 · v3</span><span class="chip t">T</span><span class="chip t">T</span><span class="chip t">T</span></div>
+      <div class="note">Rewording moves <b>16%</b> of gpt-5.4-nano's verdicts. gpt-5.5 moves none.</div>
+    </div>
+  </div>
+  <div class="cap" data-in="35.6">One eval run is one sample from a noisy process. <b>Almost nobody measures the noise.</b></div>
+</section>
+
+<!-- 4. why it slips through -->
+<div class="chapter" data-in="40.2" data-fx="fade" data-out="49.6">02 · why it slips through</div>
+<section data-out="49.6">
+  <h1 data-in="40.4">Why nothing catches it today</h1>
+  <div class="list">
+    <div class="item" data-in="41.2"><span class="n">01</span><span><b>Eval platforms report one number and stop.</b> They run the judge once per case. None report self-agreement, kappa between judges, or which cases flipped.</span></div>
+    <div class="item" data-in="43.0"><span class="n">02</span><span><b>The statistics exist, but not as a tool.</b> Test-retest reliability, Cohen's kappa, Krippendorff's alpha: a century old, standard wherever humans rate things, stuck in notebooks.</span></div>
+    <div class="item" data-in="44.8"><span class="n">03</span><span><b>The projects that tried stop at the card.</b> None take your existing evaluator, run in CI, or do anything about a flaky judge.</span></div>
+  </div>
+  <div class="punch" data-in="47.0">Before "how good is my model?" you need <em>"can I trust the number that told me?"</em></div>
+</section>
+
+<!-- 5. one command -->
+<div class="chapter" data-in="50.2" data-fx="fade" data-out="61.6">03 · mistrial</div>
+<section data-out="61.6">
+  <h1 data-in="50.4">Point mistrial at the judge you <em>already use.</em></h1>
+  <p class="lead" data-in="51.0">A model name, or the function you already run in LangSmith or openevals.</p>
+  <div class="term" data-in="51.6" data-fx="pop">
+    <div class="bar"><i></i><i></i><i></i></div>
+    <div class="body">
+      <div><span class="prompt">$</span> <span data-type="mistrial run cases.jsonl -j openai:gpt-5.4-nano -j openai:gpt-5.4-mini -j openai:gpt-5.5 --runs 5" data-at="52.2" data-cps="34"></span><span class="cur" data-in="52.2" data-fx="fade" data-dur=".1" data-out="55.0"></span></div>
+      <div class="prog" data-in="55.2" data-fx="fade" data-dur=".3"><span>judging</span><span class="track"><i data-in="55.3" data-grow="100" data-dur="1.4"></i></span><span><span data-count="480" data-from="0" data-at="55.3" data-dur="1.4"></span>/480</span><span>0:01:16</span></div>
+      <table class="ttab">
+        <tr data-in="57.0" data-fx="fade" data-dur=".4"><th>judge</th><th class="r">self-agreement</th><th class="r">flipped cases</th><th class="r">vs human</th><th>reading</th></tr>
+        <tr data-in="57.5" data-fx="left" data-dur=".5"><td class="j">openai:gpt-5.4-nano</td><td class="r">92%</td><td class="r">5/32 (16%)</td><td class="r">81% (κ 0.63)</td><td class="r2">noticeably flaky</td></tr>
+        <tr data-in="58.0" data-fx="left" data-dur=".5"><td class="j">openai:gpt-5.4-mini</td><td class="r">95%</td><td class="r">4/32 (12%)</td><td class="r">88% (κ 0.75)</td><td class="y">mostly stable</td></tr>
+        <tr data-in="58.5" data-fx="left" data-dur=".5"><td class="j">openai:gpt-5.5</td><td class="r">100%</td><td class="r">0/32 (0%)</td><td class="r">91% (κ 0.81)</td><td class="g">stable</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="cap" data-in="59.6">Each judge asked five times, 480 verdicts. <b>The card shows how much the number moves, and which cases move it.</b></div>
+</section>
+
+<!-- 6. real numbers -->
+<div class="chapter" data-in="62.2" data-fx="fade" data-out="71.6">04 · real numbers</div>
+<section data-out="71.6">
+  <h1 data-in="62.4">Three OpenAI judges, 32 tricky cases, <em>5 runs each.</em></h1>
+  <div class="res">
+    <div data-in="63.0" data-fx="fade">
+      <div class="legend"><span><i style="background:var(--ok)"></i>self-agreement: chance two runs give the same verdict</span><span><i style="background:var(--acc)"></i>matches the human label</span></div>
+      <table class="bars">
+        <tr><th>judge</th><th>self-agreement</th><th>vs human</th></tr>
+        <tr><td class="j">gpt-5.4-nano<span class="read bad" data-in="64.9" data-fx="fade">noticeably flaky</span></td><td><div class="pair"><div class="bar2 g"><i data-in="63.4" data-fx="fade" data-grow="92" data-dur="1.3"></i></div><span class="num"><span data-count="92" data-at="63.4" data-dur="1.3"></span>%</span></div></td><td><div class="pair"><div class="bar2 r"><i data-in="63.7" data-fx="fade" data-grow="81" data-dur="1.3"></i></div><span class="num"><span data-count="81" data-at="63.7" data-dur="1.3"></span>%</span></div></td></tr>
+        <tr><td class="j">gpt-5.4-mini<span class="read warn" data-in="65.3" data-fx="fade">mostly stable</span></td><td><div class="pair"><div class="bar2 g"><i data-in="63.8" data-fx="fade" data-grow="95" data-dur="1.3"></i></div><span class="num"><span data-count="95" data-at="63.8" data-dur="1.3"></span>%</span></div></td><td><div class="pair"><div class="bar2 r"><i data-in="64.1" data-fx="fade" data-grow="88" data-dur="1.3"></i></div><span class="num"><span data-count="88" data-at="64.1" data-dur="1.3"></span>%</span></div></td></tr>
+        <tr><td class="j">gpt-5.5<span class="read ok" data-in="65.7" data-fx="fade">stable</span></td><td><div class="pair"><div class="bar2 g"><i data-in="64.2" data-fx="fade" data-grow="100" data-dur="1.3"></i></div><span class="num"><span data-count="100" data-at="64.2" data-dur="1.3"></span>%</span></div></td><td><div class="pair"><div class="bar2 r"><i data-in="64.5" data-fx="fade" data-grow="91" data-dur="1.3"></i></div><span class="num"><span data-count="91" data-at="64.5" data-dur="1.3"></span>%</span></div></td></tr>
+      </table>
+      <div class="soft" style="margin-top:22px;font-size:22px" data-in="66.2" data-fx="fade">Judges agree with each other at kappa 0.69 to 0.81. Krippendorff's alpha 0.75. All 480 replies strict JSON, so none of this is a parsing problem.</div>
+    </div>
+    <div class="side">
+      <div class="card stat" data-in="66.6"><div class="k">gate risk · pass mark 0.5</div><div class="big bad"><span data-count="90" data-at="66.6" data-dur="1"></span>%</div><div class="d">how often a CI gate on <b>gpt-5.4-mini</b> goes red with nothing changed. On gpt-5.4-nano, 100%. On gpt-5.5, 0%.</div></div>
+      <div class="card stat" data-in="67.6"><div class="k">rubric sensitivity · reworded three ways</div><div class="big acc"><span data-count="16" data-at="67.6" data-dur="1"></span>%</div><div class="d">of <b>gpt-5.4-nano</b> verdicts change when the rubric is reworded with the same meaning. gpt-5.5: 0%.</div></div>
+      <div class="card stat" data-in="68.6"><div class="k">migrate · gpt-5.4-nano to gpt-5.5</div><div class="big"><span data-count="0.62" data-from="0.50" data-dec="2" data-at="68.6" data-dur="1"></span></div><div class="d">is what a 0.5 pass mark on the old judge becomes on the new one. <b>6 cases</b> get a different verdict.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 7. the fix -->
+<div class="chapter" data-in="72.2" data-fx="fade" data-out="80.6">05 · the fix</div>
+<section data-out="80.6">
+  <h1 data-in="72.4">Then it does <em>something about it.</em></h1>
+  <div class="fix">
+    <div>
+      <div class="k" data-in="73.0" data-fx="fade">self-agreement, same judge</div>
+      <div class="fixrow" data-in="73.2" data-fx="fade"><span class="lbl">gpt-5.4-nano<small>raw, one call per case</small></span><div class="bar2 g"><i data-in="73.4" data-fx="fade" data-grow="92" data-dur="1.2" style="background:#9fb9a8"></i></div><span class="num"><span data-count="92" data-at="73.4" data-dur="1.2"></span>%</span></div>
+      <div class="fixrow" data-in="74.6" data-fx="fade"><span class="lbl">gpt-5.4-nano × 5<small>stabilize(k=5), majority vote</small></span><div class="bar2 g"><i data-in="74.8" data-fx="fade" data-grow="99" data-dur="1.4"></i></div><span class="num ok"><span data-count="99" data-from="92" data-at="74.8" data-dur="1.4"></span>%</span></div>
+      <div class="code" data-in="76.3" data-fx="up"><span class="c"># same signature as your evaluator; drop it into LangSmith or openevals</span><br><span class="f">evaluator</span> = mistrial.<span class="f">stabilize</span>(<span class="s">"openai:gpt-5.4-nano"</span>, k=<span class="n">5</span>)</div>
+    </div>
+    <div class="side">
+      <div class="card mini" data-in="77.4"><div class="k">adaptive re-ask</div><div class="t">177 fewer calls</div><div class="d">Two runs everywhere, extra runs only where the two disagreed. Same numbers.</div></div>
+      <div class="card mini" data-in="78.0"><div class="k">ci gate</div><div class="t">exit 1 when the judge is flakier than you allow</div><div class="d">--min-self-agreement 0.95, --max-flip-rate, --pass-mark false-alarm rate.</div></div>
+      <div class="card mini" data-in="78.6"><div class="k">github action</div><div class="t">the card on every pull request</div><div class="d">Plus an escalation CSV of the cases a human should look at, or a LangSmith dataset.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 8. cta -->
+<section class="cta" data-out="200">
+  <div class="wordmark" data-in="81.4" data-fx="up" style="font-size:88px"><i style="width:34px;height:34px"></i>mistrial</div>
+  <div class="cmd" style="margin-top:50px" data-in="82.2" data-fx="pop"><span class="p">$</span><span data-type="pip install mistrial" data-at="82.6" data-cps="22"></span><span class="cur"></span></div>
+  <div class="alt" data-in="84.0">No key? <code>pipx run mistrial demo</code> runs three fake judges in ten seconds.</div>
+  <div class="links" data-in="84.8" data-fx="fade"><b>github.com/hemanth1999k/mistrial</b> · MIT · Python · works with OpenAI, Anthropic, Gemini, Groq, Ollama and any evaluator function</div>
+  <div class="close" data-in="85.8">When the verdict can't be trusted, <b>declare a mistrial.</b></div>
+</section>
+
+</div>
+<script>
+const EASE = "cubic-bezier(.2,.7,.2,1)";
+for (const el of document.querySelectorAll("[data-in],[data-out]")) {
+  const anims = [];
+  if (el.dataset.in !== undefined) {
+    const fx = el.dataset.fx || "up", dur = el.dataset.dur || "0.7";
+    if (el.dataset.grow !== undefined) {
+      el.style.setProperty("--w", el.dataset.grow + "%");
+      anims.push(`${fx} 0.3s ${EASE} ${el.dataset.in}s both`, `grow ${dur}s ${EASE} ${el.dataset.in}s both`);
+    } else {
+      anims.push(`${fx} ${dur}s ${EASE} ${el.dataset.in}s both`);
+    }
+  }
+  if (el.dataset.out !== undefined) anims.push(`out 0.6s ease ${el.dataset.out}s forwards`);
+  if (el.classList.contains("cur")) anims.push("blink 1s steps(1) infinite");
+  el.style.animation = anims.join(", ");
+}
+const counters = [...document.querySelectorAll("[data-count]")];
+const typers = [...document.querySelectorAll("[data-type]")];
+const ease = x => 1 - Math.pow(1 - x, 3);
+window.__seek = (t) => {
+  for (const a of document.getAnimations()) { a.pause(); a.currentTime = t * 1000; }
+  for (const el of counters) {
+    const at = +el.dataset.at, dur = +(el.dataset.dur || 1), to = +el.dataset.count, from = +(el.dataset.from || 0), dec = +(el.dataset.dec || 0);
+    const p = Math.max(0, Math.min(1, (t - at) / dur));
+    el.textContent = (from + (to - from) * ease(p)).toFixed(dec);
+  }
+  for (const el of typers) {
+    const at = +el.dataset.at, cps = +(el.dataset.cps || 30), full = el.dataset.type;
+    const n = Math.max(0, Math.min(full.length, Math.floor((t - at) * cps)));
+    el.textContent = full.slice(0, n);
+  }
+};
+window.__seek(0);
+window.__ready = document.fonts.ready.then(() => true);
+</script>
+</body></html>

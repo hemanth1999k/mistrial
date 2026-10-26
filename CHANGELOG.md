@@ -12,6 +12,7 @@ All notable changes to mistrial are recorded here. The format follows [Keep a Ch
 ### Added
 - `examples/tricky.jsonl`: 32 labeled cases built to be hard to judge (hedges, rounding, unit conversions, extra details, equivalent code). The bundled `examples/cases.jsonl` stays as the easy set.
 - `mistrial demo` says up front that its three judges are fake and flaky on purpose.
+- An 88 second animated explainer video (`docs/explainer.mp4`, not committed) rendered from `docs/explainer/explainer.html`: the problem, why it slips through, the command, the real numbers, the fix. Narration script and re-render steps in `docs/explainer/SCRIPT.md`.
 
 ## [0.2.0] - 2026-10-25
 
