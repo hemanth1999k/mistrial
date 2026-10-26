@@ -20,6 +20,23 @@ mistrial run cases.jsonl -j openai:gpt-5.4-mini -j openai:gpt-5.5 --runs 5
 
 No key? `pipx run mistrial demo` runs three fake judges that are built to be flaky on purpose.
 
+## Commands
+
+| What you want to do | Command |
+|---|---|
+| Try it, no API key | `mistrial demo` |
+| Judge your own cases, five runs | `mistrial run cases.jsonl -j openai:gpt-5.4-mini --runs 5` |
+| Compare two judge models | `mistrial run cases.jsonl -j openai:gpt-5.5 -j anthropic:claude-sonnet-5-5 --runs 5` |
+| Use your own evaluator function | `mistrial run cases.jsonl -j my_evals:correctness --runs 5` |
+| Fail CI when the judge is flaky | `mistrial run cases.jsonl -j openai:gpt-5.4-mini --min-self-agreement 0.95 --quiet` |
+| Fix it: majority vote of five samples | `mistrial run cases.jsonl -j openai:gpt-5.4-mini --stabilize 5` |
+| Re-render a saved run as HTML or markdown | `mistrial report .mistrial/runs/<run>.json --html card.html` |
+| List providers and their env vars | `mistrial providers` |
+| List rubrics | `mistrial rubrics` |
+| Every flag | `mistrial --help`, `mistrial run --help` |
+
+The [probes](#the-probes) (gate risk, rubric wording, migration, sentinel, drift, escalate) each have a command of their own, and all of them work on the demo judges.
+
 ## The problem
 
 You ship AI features based on a score from an LLM judge. The score gates CI, decides which prompt wins, and goes on the dashboard. But the judge is a model sampling from a distribution. Ask it the same question twice and it changes its verdict on some of your cases. Swap the model and it changes its mind on more. Reword the rubric without changing its meaning and it moves again. One eval run is one sample from a noisy process, and almost nobody measures the noise.
@@ -130,23 +147,7 @@ The card:
 - **Flakiest cases**: every verdict from every judge and run, as chips, ranked by disagreement. This is where you go to fix your rubric.
 - **Parser audit**: how each reply was read (strict JSON, code fence, buried in prose, no verdict), so a parsing problem never gets blamed on the model.
 
-The probes, each one answering a way judges go wrong in production:
-
-- **Gate risk**: how often your CI gate would go red with nothing changed, and the pass mark or run count that fixes it.
-- **Rubric sensitivity**: reword the rubric three ways with the same meaning and count the verdicts that move.
-- **Rubric reversal**: ask for "incorrect" instead of "correct" and check the verdicts invert.
-- **Migration**: switching judge models? See what moved and what your pass mark becomes on the new judge.
-- **Sentinel**: freeze a baseline on anchor cases and catch a judge that changed under you, on a schedule.
-- **Drift**: compare any two saved runs, case by case.
-
-The fixes:
-
-- **Stabilize**: wrap the judge in a K-sample majority vote, with the same evaluator signature, and measure it next to the raw one.
-- **Adaptive re-ask**: two runs everywhere, extra runs only where the two disagreed. Same numbers, a fraction of the calls.
-- **Escalate**: a CSV of the cases a human should look at, or push them to a LangSmith dataset.
-- **CI gate and GitHub Action**: fail the build when a judge is flakier than you allow, and post the card on the pull request.
-
-Responses are cached on disk, so re-rendering a report is free and `--fresh` is explicit.
+Every run is saved as JSON under `.mistrial/runs/` and every response is cached on disk, so the probes below can read a saved run, re-rendering is free, and `--fresh` is explicit. Beyond the card: [the probes](#the-probes) for the ways judges go wrong in production, [the fixes](#the-fixes) for the flakiness they find, and [the CI setup](#in-ci) to keep it that way.
 
 ## Usage
 
@@ -218,35 +219,18 @@ Any LangSmith custom evaluator with the same signature works the same way. Expor
 
 `--rubric correctness` (boolean, needs `reference_outputs`) and `--rubric quality` (1 to 5, no reference). Or `--rubric my_prompt.txt` with `{inputs}`, `{outputs}`, `{reference_outputs}` placeholders; the model must reply with JSON `{"score": ..., "reasoning": ...}`. Run `mistrial rubrics` to list them.
 
-### Drift
-
-```bash
-mistrial run cases.jsonl --judge openai:gpt-5.4-mini --runs 5 --fresh
-mistrial compare .mistrial/runs/20261025-101500.json .mistrial/runs/20261101-093000.json
-```
-
-Per judge: the cases whose majority verdict changed, and flip rate and accuracy before and after.
-
-### CI gate
-
-```bash
-mistrial run cases.jsonl --judge openai:gpt-5.4-mini --runs 3 \
-  --min-self-agreement 0.95 --max-flip-rate 0.10 --min-agreement 0.6 --quiet
-```
-
-Exit code 1 and a one-line reason on stderr when any gate fails. Use `--min-self-agreement` as the primary gate; it does not depend on `--runs`.
-
-### Re-render
-
-```bash
-mistrial report .mistrial/runs/20261025-101500.json --html card.html --markdown card.md
-```
-
-No API calls. Re-renders the card from a saved run, as HTML and as the markdown the GitHub Action posts.
-
 ## The probes
 
-Everything below works on the demo judges too, so you can try each one before spending a token: swap `openai:gpt-5.4-mini` for `demo:flaky`.
+Each probe answers one way judges go wrong in production. Most read a saved run, so they cost nothing after the `run` that produced it. Everything below works on the demo judges too, so you can try each one before spending a token: swap `openai:gpt-5.4-mini` for `demo:flaky`.
+
+| Question | Command |
+|---|---|
+| Will my CI gate go red on its own? | `mistrial gate-risk .mistrial/runs/<run>.json --pass-mark 0.5` |
+| Is the verdict just the rubric wording? | `mistrial rubric-check cases.jsonl -j openai:gpt-5.4-mini` |
+| My judge model is being retired, what moves? | `mistrial migrate .mistrial/runs/<run>.json --pass-mark 0.5` |
+| Did the judge change under me? | `mistrial sentinel baseline <run>.json`, then `mistrial sentinel check anchors.jsonl -j openai:gpt-5.4-mini` |
+| What changed between two runs? | `mistrial compare <old-run>.json <new-run>.json` |
+| Which cases need a human? | `mistrial escalate .mistrial/runs/<run>.json --out needs-human.csv` |
 
 ### Gate risk: will my CI gate go red on its own?
 
@@ -318,6 +302,31 @@ mistrial sentinel check anchors.jsonl --judge openai:gpt-5.4-mini
 
 Exit 0 `STABLE`, exit 2 `JUDGE_DRIFT` (more than `--max-changed` of anchor verdicts changed, or kappa vs human fell by more than `--max-kappa-drop`), exit 3 if the anchors themselves changed. The anchors never change, so any movement is the judge, which is how you catch a vendor's quiet model update before it blocks a release. Design credit: [judge-drift-sentinel](https://pypi.org/project/judge-drift-sentinel/).
 
+### Drift: what changed between these two runs?
+
+```bash
+mistrial run cases.jsonl --judge openai:gpt-5.4-mini --runs 5 --fresh
+mistrial compare .mistrial/runs/20261025-101500.json .mistrial/runs/20261101-093000.json
+```
+
+Per judge: the cases whose majority verdict changed, and flip rate and accuracy before and after. Sentinel is this, on a schedule, against anchors that never change; `compare` is the ad hoc version for any two runs you have.
+
+### Escalate: what should a human look at?
+
+```bash
+mistrial escalate .mistrial/runs/20261025-101500.json --out needs-human.csv
+mistrial escalate .mistrial/runs/20261025-101500.json --langsmith-dataset needs-human   # pip install langsmith
+```
+
+One row per case where judges disagreed, flipped, or missed the human label, with every verdict, the case itself, and an empty `your_verdict` column for the reviewer. The LangSmith option creates or extends a dataset with the same rows so your team can annotate them there.
+
+## The fixes
+
+| What | Command |
+|---|---|
+| Majority vote of K samples, measured next to the raw judge | `mistrial run cases.jsonl -j openai:gpt-5.4-mini --runs 5 --stabilize 5` |
+| The same numbers for a fraction of the calls | `mistrial run cases.jsonl -j openai:gpt-5.4-mini --runs 7 --adaptive` |
+
 ### Stabilize: the fix, as a judge
 
 ```bash
@@ -344,14 +353,16 @@ mistrial run cases.jsonl --judge openai:gpt-5.4-mini --runs 7 --adaptive
 
 Every case gets two runs. Only cases where the two disagreed (or a call failed) get the remaining five. Self-agreement is estimated from pairs within each case, so settled cases lose nothing. The card reports the calls skipped.
 
-### Escalate: what should a human look at?
+## In CI
+
+### The gate
 
 ```bash
-mistrial escalate .mistrial/runs/20261025-101500.json --out needs-human.csv
-mistrial escalate .mistrial/runs/20261025-101500.json --langsmith-dataset needs-human   # pip install langsmith
+mistrial run cases.jsonl --judge openai:gpt-5.4-mini --runs 3 \
+  --min-self-agreement 0.95 --max-flip-rate 0.10 --min-agreement 0.6 --quiet
 ```
 
-One row per case where judges disagreed, flipped, or missed the human label, with every verdict, the case itself, and an empty `your_verdict` column for the reviewer. The LangSmith option creates or extends a dataset with the same rows so your team can annotate them there.
+Exit code 1 and a one-line reason on stderr when any gate fails. Use `--min-self-agreement` as the primary gate; it does not depend on `--runs`. Add `--pass-mark` and the card also reports the [gate risk](#gate-risk-will-my-ci-gate-go-red-on-its-own), so you learn the false-alarm rate of the gate before it fires.
 
 ### GitHub Action: the card on every pull request
 
@@ -378,7 +389,16 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-Posts the card as a comment on the PR (updated in place on later pushes), writes it to the job summary, uploads the HTML report as an artifact, and fails the job when a gate fails. Outside GitHub, `mistrial run … --markdown card.md` writes the same comment for whatever posts it.
+Posts the card as a comment on the PR (updated in place on later pushes), writes it to the job summary, uploads the HTML report as an artifact, and fails the job when a gate fails.
+
+### Elsewhere
+
+```bash
+mistrial run cases.jsonl --judge openai:gpt-5.4-mini --runs 3 --markdown card.md --html card.html
+mistrial report .mistrial/runs/20261025-101500.json --html card.html --markdown card.md   # from a saved run, no API calls
+```
+
+The markdown is the same comment the Action posts, for whatever posts it in GitLab, Buildkite or a Slack hook. `report` re-renders any saved run without a single API call.
 
 ## How the numbers are computed
 
