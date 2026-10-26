@@ -20,6 +20,11 @@ mistrial run cases.jsonl -j openai:gpt-5.4-mini -j openai:gpt-5.5 --runs 5
 
 No key? `pipx run mistrial demo` runs three fake judges that are built to be flaky on purpose.
 
+<p align="center">
+  <a href="https://github.com/hemanth1999k/mistrial/releases/download/v0.2.1/explainer.mp4"><img src="https://raw.githubusercontent.com/hemanth1999k/mistrial/main/docs/explainer-poster.png" alt="Watch the 90 second explainer: the problem, why it slips through, one command, the real numbers, the fix" width="820"></a><br>
+  <sub>90 second explainer. Every number in it is from the runs below.</sub>
+</p>
+
 ## The problem
 
 You ship AI features based on a score from an LLM judge. The score gates CI, decides which prompt wins, and goes on the dashboard. But the judge is a model sampling from a distribution. Ask it the same question twice and it changes its verdict on some of your cases. Swap the model and it changes its mind on more. Reword the rubric without changing its meaning and it moves again. One eval run is one sample from a noisy process, and almost nobody measures the noise.
