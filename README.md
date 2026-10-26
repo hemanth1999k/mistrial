@@ -381,9 +381,9 @@ Other people have looked at this problem, and some of their tools go deeper than
 
 The full table, with links and what each of them does better, is in [docs/COMPARISON.md](docs/COMPARISON.md). If a cell is wrong, open an issue and it gets fixed.
 
-## Standing on shoulders
+## Credits, and repos to check out
 
-Mistrial puts century-old reliability statistics in front of a new kind of rater. None of the ideas are new; the packaging is. People and projects worth following if you work on this:
+Mistrial puts century-old reliability statistics in front of a new kind of rater. None of the ideas are new; the packaging is. This section is the credit: the papers the methods come from, the posts that shaped the framing, and the projects that got to parts of this first. All worth following if you work on this.
 
 **Papers to read**
 
