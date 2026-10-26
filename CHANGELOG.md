@@ -4,6 +4,8 @@ All notable changes to mistrial are recorded here. The format follows [Keep a Ch
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-10-26
+
 ### Fixed
 - `mistrial report --html none` wrote the HTML to a file literally named `none`. It now skips the HTML like `run` and `demo` do.
 - Two runs in the same second overwrote each other's saved JSON under `.mistrial/runs/`. Same-second runs now get `-2`, `-3`, ... suffixes.
