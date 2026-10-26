@@ -1,0 +1,21 @@
+# Dogfood: run the published mistrial Action on every pull request, with the built-in demo
+# judges so it needs no API key. The card lands as a PR comment, the job summary, and an artifact.
+name: mistrial
+
+on: [pull_request]
+
+jobs:
+  judge:
+    runs-on: ubuntu-latest
+    permissions: { contents: read, pull-requests: write }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: hemanth1999k/mistrial@v0.2.2
+        with:
+          cases: examples/tricky.jsonl
+          judges: "demo:flaky demo:steady"
+          runs: "5"
+          pass-mark: "0.5"
+          min-self-agreement: "0.5"
