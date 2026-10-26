@@ -11,9 +11,6 @@ Nothing yet.
 First public release. Ten additions over 0.1.0, each answering a documented way LLM judges go wrong in production.
 
 ### Added
-- `examples/tricky.jsonl`: 32 labeled cases built to be hard to judge (hedges, rounding, unit conversions, extra details, equivalent code). The bundled `examples/cases.jsonl` stays as the easy set.
-- `mistrial demo` says up front that its three judges are fake and flaky on purpose.
-- `docs/img/compare.png`, a feature comparison against judgecheck, judgebench, Assay, judge-drift-sentinel and LangSmith/promptfoo, and a "Standing on shoulders" README section with the papers and repos this builds on.
 - **Rubric sensitivity** (`mistrial rubric-check`): run the judge under three rewordings of the rubric that mean the same thing, report the share of verdicts that change and Krippendorff's alpha across wordings. Built-in rewordings for `correctness` and `quality`; bring your own with `--variant`.
 - **Rubric reversal** (same command): ask with the criterion flipped and check that verdicts invert. Reports the cases where the judge gave the same answer to "is it correct?" and "is it incorrect?".
 - **Gate false-alarm rate** (`--pass-mark` on `run`/`report`, and `mistrial gate-risk`): how often your CI gate would go red with nothing changed, by re-sampling each case's observed verdicts; plus a safe mark and the runs per case that bring the rate under 5%.
@@ -24,7 +21,11 @@ First public release. Ten additions over 0.1.0, each answering a documented way 
 - **Escalation** (`mistrial escalate`): a CSV of the cases a human should look at, with a column for their verdict; `--langsmith-dataset` pushes them to LangSmith.
 - **Stabilized evaluator** (`--stabilize K` and `mistrial.stabilize()`): the judge wrapped in a K-sample majority vote with the same evaluator signature, measured next to the raw one.
 - **GitHub Action** (`action.yml`): runs the card in CI, posts it as a PR comment, uploads the HTML report, fails the job on a gate. `--markdown` writes the same card anywhere.
+- `examples/tricky.jsonl`: 32 labeled cases built to be hard to judge (hedges, rounding, unit conversions, extra details, equivalent code). The bundled `examples/cases.jsonl` stays as the easy set.
+- `mistrial demo` says up front that its three judges are fake and flaky on purpose.
+- `docs/img/compare.png`, a feature comparison against judgecheck, judgebench, Assay, judge-drift-sentinel and LangSmith/promptfoo, and a "Standing on shoulders" README section with the papers and repos this builds on.
 - Judges for every OpenAI-compatible provider: `gemini:`, `groq:`, `mistral:`, `deepseek:`, `xai:`, `together:`, `openrouter:`, `ollama:` (local, no key) and `custom:` with `MISTRIAL_BASE_URL`. `<PROVIDER>_BASE_URL` overrides any base URL. `mistrial providers` lists them.
+- An 88 second animated explainer video (`docs/explainer.mp4`, not committed) rendered from `docs/explainer/explainer.html`: the problem, why it slips through, the command, the real numbers, the fix. Narration script and re-render steps in `docs/explainer/SCRIPT.md`.
 
 ### Changed
 - The project is called **mistrial**. Package, command, env vars (`MISTRIAL_BASE_URL`, `MISTRIAL_API_KEY`) and the `.mistrial/` directory all follow. It was briefly called judgeflake before any release.
