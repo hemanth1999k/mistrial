@@ -20,10 +20,6 @@ mistrial run cases.jsonl -j openai:gpt-5.4-mini -j openai:gpt-5.5 --runs 5
 
 No key? `pipx run mistrial demo` runs three fake judges that are built to be flaky on purpose.
 
-**The 90 second version.** Every number in it is from the runs below.
-
-https://github.com/user-attachments/assets/3ff4653d-6fcd-4848-993f-df576a8c8044
-
 ## The problem
 
 You ship AI features based on a score from an LLM judge. The score gates CI, decides which prompt wins, and goes on the dashboard. But the judge is a model sampling from a distribution. Ask it the same question twice and it changes its verdict on some of your cases. Swap the model and it changes its mind on more. Reword the rubric without changing its meaning and it moves again. One eval run is one sample from a noisy process, and almost nobody measures the noise.
@@ -47,6 +43,10 @@ The research agrees. The same judge gives different scores to the same answer ac
 <p align="center"><img src="https://raw.githubusercontent.com/hemanth1999k/mistrial/main/docs/img/how.png" alt="You bring cases, any judge and a rubric. mistrial re-asks across runs, judges and rubric wordings. You get a reliability card, a verdict on the judge, and a stabilized judge as the fix." width="1000"></p>
 
 Point it at the evaluator you already use: a model name, or the function you run in LangSmith or openevals. It asks the judge several times, across one or more judge models, and under rewordings of the rubric, and reports the spread: self-agreement, flipped cases, kappa and alpha between judges, accuracy against your human labels, and the exact cases that move. Then it does something about it: a gate for CI, a stabilized judge with the same signature, and a list of the cases a human should look at.
+
+**The 90 second version.** Every number in it is from the runs below.
+
+https://github.com/user-attachments/assets/3ff4653d-6fcd-4848-993f-df576a8c8044
 
 ## Real numbers
 
