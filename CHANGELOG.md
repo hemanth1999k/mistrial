@@ -4,6 +4,13 @@ All notable changes to mistrial are recorded here. The format follows [Keep a Ch
 
 ## [Unreleased]
 
+### Changed
+- GitHub Action: the HTML report is no longer uploaded as an artifact unless you set `upload-report: "true"`. It holds full case text and raw model replies, and artifacts on a public repository are downloadable by anyone with a GitHub account.
+- GitHub Action: the `version` input now reaches the install step through the environment like every other input, instead of being interpolated into the script.
+
+### Added
+- Dependabot for pip and GitHub Actions.
+
 ## [0.2.2] - 2026-10-26
 
 ### Fixed

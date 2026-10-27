@@ -36,6 +36,9 @@ inputs:
   comment:
     description: Post the card as a comment on the pull request ("true" or "false").
     default: "true"
+  upload-report:
+    description: Upload the HTML report as a workflow artifact ("true" or "false"). It contains your full case text and raw model replies, and anyone with a GitHub account can download artifacts from a public repo, so it is off by default.
+    default: "false"
   version:
     description: mistrial version to install (a PyPI version spec, or "." for the checked-out repo).
     default: ""
@@ -56,11 +59,13 @@ runs:
   steps:
     - name: Install mistrial
       shell: bash
+      env:
+        JF_VERSION: ${{ inputs.version }}
       run: |
-        if [ "${{ inputs.version }}" = "." ]; then
+        if [ "$JF_VERSION" = "." ]; then
           python -m pip install -q -e .
-        elif [ -n "${{ inputs.version }}" ]; then
-          python -m pip install -q "mistrial${{ inputs.version }}"
+        elif [ -n "$JF_VERSION" ]; then
+          python -m pip install -q "mistrial$JF_VERSION"
         else
           python -m pip install -q mistrial
         fi
@@ -118,6 +123,7 @@ runs:
         fi
 
     - name: Upload the HTML report
+      if: inputs.upload-report == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: mistrial-report
