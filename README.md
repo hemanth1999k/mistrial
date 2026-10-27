@@ -372,7 +372,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-Posts the card as a comment on the PR (updated in place on later pushes), writes it to the job summary, uploads the HTML report as an artifact, and fails the job when a gate fails.
+Posts the card as a comment on the PR (updated in place on later pushes), writes it to the job summary, and fails the job when a gate fails. Add `upload-report: "true"` to also attach the HTML report as an artifact; it holds your full case text, and artifacts on a public repo are downloadable by anyone with a GitHub account, so it is off by default.
 
 ### Elsewhere
 
